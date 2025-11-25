@@ -8,7 +8,6 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
 @Builder
 @Entity
 @Table(name = "checklist_answers")

@@ -11,7 +11,6 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

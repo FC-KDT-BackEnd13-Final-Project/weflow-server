@@ -5,6 +5,9 @@ import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
+
 @Getter
 @Builder
 @Entity
@@ -17,33 +20,37 @@ public class StepRequestHistory extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 버전 */
-    @Column(nullable = false)
-    private Integer version;
+    /** 변경 타입: REQUEST_UPDATE, FILE_UPDATE, REASON_UPDATE */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "history_type", nullable = false, length = 30)
+    private HistoryType historyType;
 
-    /** 수정 시의 제목 스냅샷 */
-    @Column(nullable = false, length = 255)
-    private String title;
+    /** 변경된 필드명 (예: request_title, request_description, reason 등) */
+    @Column(name = "field_name", length = 100)
+    private String fieldName;
 
-    /** 첨부파일 목록 JSON */
-    @Column(columnDefinition = "JSON")
-    private String attachments;
+    /** 변경되기 전 값(JSON, TEXT 등) */
+    @Column(name = "before_content", columnDefinition = "TEXT")
+    private String beforeContent;
 
-    /** 내용(코멘트/메모) 스냅샷 */
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
-    /** 수정 시각 */
+    /** 이력이 만들어진 시점 */
     @Column(name = "updated_at", nullable = false)
-    private java.time.LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
-    /** 어떤 승인 요청의 이력인지 */
+    /** 어떤 승인요청의 이력인지 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)
     private StepRequest request;
 
-    /** 수정자 */
+    /** 변경한 유저 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by", nullable = false)
     private User updatedBy;
+
+    // --- ENUM 정의 ---
+    public enum HistoryType {
+        REQUEST_UPDATE,
+        FILE_UPDATE,
+        REASON_UPDATE
+    }
 }

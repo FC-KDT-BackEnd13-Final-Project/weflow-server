@@ -8,10 +8,10 @@ import lombok.*;
 @Getter
 @Builder
 @Entity
-@Table(name = "step_request_feedback")
+@Table(name = "step_request_answer")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class StepRequestFeedback extends BaseEntity {
+public class StepRequestAnswer extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,14 +25,6 @@ public class StepRequestFeedback extends BaseEntity {
     /** 사유 (REJECT, CHANGE_REQUEST 시 주로 사용) */
     @Column(columnDefinition = "TEXT")
     private String reasonText;
-
-    /** 첨부파일 URL */
-    @Column(length = 255)
-    private String fileUrl;
-
-    /** 링크 URL */
-    @Column(length = 255)
-    private String linkUrl;
 
     /** 어떤 승인요청에 대한 응답인지 */
     @ManyToOne(fetch = FetchType.LAZY)

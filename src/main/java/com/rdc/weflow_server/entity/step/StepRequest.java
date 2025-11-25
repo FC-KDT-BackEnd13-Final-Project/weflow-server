@@ -6,6 +6,7 @@ import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class StepRequest extends BaseEntity {
     private Status status;
 
     /** 승인/거절된 시각 */
-    private java.time.LocalDateTime decidedAt;
+    private LocalDateTime decidedAt;
 
     /** 어떤 단계(step)에 대한 승인요청인지 */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -54,12 +55,6 @@ public class StepRequest extends BaseEntity {
         REJECTED,
         CHANGE_REQUEST
     }
-
-    @OneToMany(mappedBy = "stepRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<StepRequestFile> files = new ArrayList<>();
-
-    @OneToMany(mappedBy = "stepRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<StepRequestLink> links = new ArrayList<>();
 
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StepRequestHistory> histories = new ArrayList<>();

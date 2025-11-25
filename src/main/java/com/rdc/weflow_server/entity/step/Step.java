@@ -28,7 +28,7 @@ public class Step extends BaseEntity {
     private String description;
 
     @Column
-    private Integer orderIndex; // 정렬 순서 ?
+    private Integer orderIndex; // 정렬 순서
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
@@ -40,6 +40,6 @@ public class Step extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User user; // createdBy // TODO: 정확히 어떤 User인지 서비스 관점으로 확인
+    private User createdBy;
 
 }

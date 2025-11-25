@@ -21,7 +21,7 @@ public class Company extends BaseEntity {
     private String name;
 
     @Column(unique = true)
-    private String businessRegistrationNumber;
+    private String BusinessNumber;
 
     @Column
     private String representative;

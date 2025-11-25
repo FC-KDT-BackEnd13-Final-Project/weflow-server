@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.entity.user;
+package com.rdc.weflow_server.entity.company;
 
 
 import com.rdc.weflow_server.entity.BaseEntity;

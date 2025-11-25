@@ -1,6 +1,8 @@
 package com.rdc.weflow_server.entity.user;
 
 import com.rdc.weflow_server.entity.BaseEntity;
+import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.project.ProjectMember;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.Getter;

@@ -1,6 +1,7 @@
-package com.rdc.weflow_server.entity.user;
+package com.rdc.weflow_server.entity.project;
 
 import com.rdc.weflow_server.entity.BaseEntity;
+import com.rdc.weflow_server.entity.company.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

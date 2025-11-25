@@ -43,7 +43,7 @@ public class User extends BaseEntity {
     private UserStatus status;
 
     @Column
-    private Boolean isTemporaryPassword; // 최초 로그인시 비밀번호 변경 여부
+    private Boolean isTemporaryPassword = false; // 최초 로그인시 비밀번호 변경 여부
 
     @Column
     private LocalDateTime lastLoginAt; // 마지막 로그인 일시

@@ -33,8 +33,9 @@ public class ActivityLog extends BaseEntity {
     @Column
     private String ipAddress;
 
-    @OneToMany(mappedBy = "activityLog")
-    private List<User> users;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "project_id")

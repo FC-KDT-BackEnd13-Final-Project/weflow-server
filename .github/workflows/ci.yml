@@ -38,8 +38,10 @@ jobs:
         run: chmod +x gradlew
 
       # 빌드 캐싱 증가: Gradle Build Cache 활성화
-      - name: Enable Gradle Build Cache
-        run: echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
+      - name: Enable Gradle Cache
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
 
       # 5. 빌드 (테스트 포함)
       - name: Build with Gradle

@@ -9,9 +9,10 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@Table(name = "steps")
 @Entity
-public class Step extends BaseEntity {
+@Table(name = "steps")
+public class
+Step extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,24 +23,23 @@ public class Step extends BaseEntity {
     private Phase phase; // 상위 카테고리
 
     @Column(nullable = false)
-    private String title; // 요구사항, 기획, 디자인, 퍼블리싱, 개발 ...
+    private String title; // 단계 이름(요구사항, 기획, 디자인, 퍼블리싱, 개발 등)
 
     @Column
-    private String description;
+    private String description; // 설명
 
     @Column
     private Integer orderIndex; // 정렬 순서
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private StepStatus status;
+    private StepStatus status; // 단계 진행 상태
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    private Project project;
+    private Project project; // 프로젝트 ID
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User createdBy;
-
+    private User createdBy; // 단계 생성자
 }

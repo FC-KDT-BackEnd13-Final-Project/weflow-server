@@ -33,10 +33,6 @@ public class StepRequestHistory extends BaseEntity {
     @Column(name = "before_content", columnDefinition = "TEXT")
     private String beforeContent;
 
-    /** 이력이 만들어진 시점 */
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     /** 어떤 승인요청의 이력인지 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)

@@ -1,10 +1,12 @@
 package com.rdc.weflow_server.controller.post;
 
+import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.entity.step.Phase;
 import com.rdc.weflow_server.service.post.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,5 +38,17 @@ public class PostController {
     ) {
         List<PostListResponse> responses = postService.getPosts(projectId, phase, stepId);
         return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * 게시글 작성
+     */
+    @PostMapping("/api/projects/{projectId}/posts")
+    public ResponseEntity<PostDetailResponse> createPost(
+            @PathVariable Long projectId,
+            @RequestBody PostCreateRequest request
+    ) {
+        PostDetailResponse response = postService.createPost(projectId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

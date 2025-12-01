@@ -1,18 +1,26 @@
 package com.rdc.weflow_server.service.post;
 
+import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.post.Post;
+import com.rdc.weflow_server.entity.post.PostApprovalStatus;
+import com.rdc.weflow_server.entity.post.PostOpenStatus;
 import com.rdc.weflow_server.entity.post.PostQuestion;
 import com.rdc.weflow_server.entity.step.Phase;
+import com.rdc.weflow_server.entity.step.Step;
+import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
+import com.rdc.weflow_server.repository.step.StepRepository;
+import com.rdc.weflow_server.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,6 +31,8 @@ public class PostService {
     private final PostRepository postRepository;
     private final AttachmentRepository attachmentRepository;
     private final PostQuestionRepository postQuestionRepository;
+    private final StepRepository stepRepository;
+    private final UserRepository userRepository;
 
     /**
      * 게시글 상세 조회
@@ -137,8 +147,92 @@ public class PostService {
                 .toList();
     }
 
-    // 게시글 작성
+    /**
+     * 게시글 작성
+     */
+    @Transactional
+    public PostDetailResponse createPost(Long projectId, PostCreateRequest request) {
+        // Step 조회 및 검증
+        Step step = stepRepository.findById(request.getStepId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.STEP_NOT_FOUND));
 
+        // Step이 해당 프로젝트에 속하는지 검증
+        if (!step.getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
+        }
+
+        // User 조회
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // ParentPost 조회 (답글인 경우)
+        Post parentPost = null;
+        if (request.getParentPostId() != null) {
+            parentPost = postRepository.findById(request.getParentPostId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        }
+
+        // 질문이 있으면 WAITING_CONFIRM, 없으면 NORMAL
+        PostApprovalStatus status = (request.getQuestions() != null && !request.getQuestions().isEmpty())
+                ? PostApprovalStatus.WAITING_CONFIRM
+                : PostApprovalStatus.NORMAL;
+
+        // Post 생성 및 저장
+        Post post = Post.builder()
+                .title(request.getTitle())
+                .content(request.getContent())
+                .status(status)
+                .openStatus(PostOpenStatus.OPEN)
+                .step(step)
+                .user(user)
+                .parentPost(parentPost)
+                .build();
+        post = postRepository.save(post);
+
+        // Attachments 저장 (FILE)
+        if (request.getAttachments() != null) {
+            for (PostCreateRequest.AttachmentRequest attachmentReq : request.getAttachments()) {
+                Attachment attachment = Attachment.builder()
+                        .targetType(Attachment.TargetType.POST)
+                        .targetId(post.getId())
+                        .attachmentType(Attachment.AttachmentType.FILE)
+                        .fileName(attachmentReq.getFileName())
+                        .fileSize(attachmentReq.getFileSize())
+                        .filePath(attachmentReq.getFilePath())
+                        .build();
+                attachmentRepository.save(attachment);
+            }
+        }
+
+        // Links 저장 (LINK)
+        if (request.getLinks() != null) {
+            for (PostCreateRequest.LinkRequest linkReq : request.getLinks()) {
+                Attachment link = Attachment.builder()
+                        .targetType(Attachment.TargetType.POST)
+                        .targetId(post.getId())
+                        .attachmentType(Attachment.AttachmentType.LINK)
+                        .url(linkReq.getUrl())
+                        .build();
+                attachmentRepository.save(link);
+            }
+        }
+
+        // Questions 저장
+        if (request.getQuestions() != null) {
+            for (PostCreateRequest.QuestionRequest questionReq : request.getQuestions()) {
+                PostQuestion question = PostQuestion.builder()
+                        .post(post)
+                        .questionText(questionReq.getQuestionText())
+                        .confirmLabel(questionReq.getConfirmLabel())
+                        .rejectLabel(questionReq.getRejectLabel())
+                        .build();
+                postQuestionRepository.save(question);
+            }
+        }
+
+        // 생성된 게시글 상세 정보 반환
+        return getPost(projectId, post.getId());
+    }
 
     // 게시글 수정
 

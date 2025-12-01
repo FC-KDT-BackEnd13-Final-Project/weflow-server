@@ -1,0 +1,47 @@
+package com.rdc.weflow_server.dto.post;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+public class PostCreateRequest {
+
+    private String title;
+    private String content;
+    private Long stepId;
+    private Long userId; // TODO: 나중에 JWT 인증으로 대체
+    private Long parentPostId; // 답글인 경우
+    private List<AttachmentRequest> attachments;
+    private List<LinkRequest> links;
+    private List<QuestionRequest> questions;
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttachmentRequest {
+        private String fileName;
+        private Long fileSize;
+        private String filePath;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkRequest {
+        private String url;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class QuestionRequest {
+        private String questionText;
+        private String confirmLabel;
+        private String rejectLabel;
+    }
+}

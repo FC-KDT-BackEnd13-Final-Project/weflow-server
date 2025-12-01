@@ -3,6 +3,7 @@ package com.rdc.weflow_server.service.post;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
+import com.rdc.weflow_server.dto.post.PostUpdateRequest;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.post.Post;
 import com.rdc.weflow_server.entity.post.PostApprovalStatus;
@@ -234,7 +235,95 @@ public class PostService {
         return getPost(projectId, post.getId());
     }
 
-    // 게시글 수정
+    /**
+     * 게시글 수정
+     */
+    @Transactional
+    public PostDetailResponse updatePost(Long projectId, Long postId, PostUpdateRequest request) {
+        // Post 조회 및 검증
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // projectId 검증
+        if (!post.getStep().getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        // 제목 및 내용 수정
+        if (request.getTitle() != null) {
+            post.updateTitle(request.getTitle());
+        }
+        if (request.getContent() != null) {
+            post.updateContent(request.getContent());
+        }
+
+        // 기존 첨부파일 삭제
+        if (request.getAttachments() != null) {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.POST,
+                    postId,
+                    Attachment.AttachmentType.FILE
+            );
+
+            // 새 첨부파일 저장
+            for (PostUpdateRequest.AttachmentRequest attachmentReq : request.getAttachments()) {
+                Attachment attachment = Attachment.builder()
+                        .targetType(Attachment.TargetType.POST)
+                        .targetId(postId)
+                        .attachmentType(Attachment.AttachmentType.FILE)
+                        .fileName(attachmentReq.getFileName())
+                        .fileSize(attachmentReq.getFileSize())
+                        .filePath(attachmentReq.getFilePath())
+                        .build();
+                attachmentRepository.save(attachment);
+            }
+        }
+
+        // 기존 링크 삭제
+        if (request.getLinks() != null) {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.POST,
+                    postId,
+                    Attachment.AttachmentType.LINK
+            );
+
+            // 새 링크 저장
+            for (PostUpdateRequest.LinkRequest linkReq : request.getLinks()) {
+                Attachment link = Attachment.builder()
+                        .targetType(Attachment.TargetType.POST)
+                        .targetId(postId)
+                        .attachmentType(Attachment.AttachmentType.LINK)
+                        .url(linkReq.getUrl())
+                        .build();
+                attachmentRepository.save(link);
+            }
+        }
+
+        // 기존 질문 삭제
+        if (request.getQuestions() != null) {
+            postQuestionRepository.deleteByPostId(postId);
+
+            // 새 질문 저장
+            for (PostUpdateRequest.QuestionRequest questionReq : request.getQuestions()) {
+                PostQuestion question = PostQuestion.builder()
+                        .post(post)
+                        .questionText(questionReq.getQuestionText())
+                        .confirmLabel(questionReq.getConfirmLabel())
+                        .rejectLabel(questionReq.getRejectLabel())
+                        .build();
+                postQuestionRepository.save(question);
+            }
+
+            // 질문 유무에 따라 상태 업데이트
+            PostApprovalStatus newStatus = request.getQuestions().isEmpty()
+                    ? PostApprovalStatus.NORMAL
+                    : PostApprovalStatus.WAITING_CONFIRM;
+            post.updateStatus(newStatus);
+        }
+
+        // 수정된 게시글 상세 정보 반환
+        return getPost(projectId, postId);
+    }
 
     // 게시글 삭제
 }

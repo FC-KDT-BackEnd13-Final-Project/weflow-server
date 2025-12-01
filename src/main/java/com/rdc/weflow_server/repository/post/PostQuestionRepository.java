@@ -10,4 +10,6 @@ import java.util.List;
 public interface PostQuestionRepository extends JpaRepository<PostQuestion, Long> {
 
     List<PostQuestion> findByPostId(Long postId);
+
+    void deleteByPostId(Long postId);
 }

@@ -3,6 +3,7 @@ package com.rdc.weflow_server.controller.post;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
+import com.rdc.weflow_server.dto.post.PostUpdateRequest;
 import com.rdc.weflow_server.entity.step.Phase;
 import com.rdc.weflow_server.service.post.PostService;
 import lombok.RequiredArgsConstructor;
@@ -51,4 +52,18 @@ public class PostController {
         PostDetailResponse response = postService.createPost(projectId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    /**
+     * 게시글 수정
+     */
+    @PatchMapping("/api/projects/{projectId}/posts/{postId}")
+    public ResponseEntity<PostDetailResponse> updatePost(
+            @PathVariable Long projectId,
+            @PathVariable Long postId,
+            @RequestBody PostUpdateRequest request
+    ) {
+        PostDetailResponse response = postService.updatePost(projectId, postId, request);
+        return ResponseEntity.ok(response);
+    }
+
 }

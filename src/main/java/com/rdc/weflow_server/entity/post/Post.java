@@ -51,4 +51,17 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user; // 작성자 ID
 
+    // 업데이트 메소드
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void updateStatus(PostApprovalStatus status) {
+        this.status = status;
+    }
+
 }

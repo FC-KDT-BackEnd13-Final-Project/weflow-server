@@ -5,14 +5,15 @@ import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 @Entity
 public class User extends BaseEntity {
@@ -40,13 +41,15 @@ public class User extends BaseEntity {
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private UserStatus status;
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
 
     @Column
-    private Boolean isTemporaryPassword = false; // 최초 로그인시 비밀번호 변경 여부
+    @Builder.Default
+    private Boolean isTemporaryPassword = true;
 
     @Column
-    private LocalDateTime lastLoginAt; // 마지막 로그인 일시
+    private LocalDateTime lastLoginAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
@@ -55,4 +58,8 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user")
     private List<ProjectMember> projectMembers;
 
+    // 로그인 성공 시 시간 업데이트
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
 }

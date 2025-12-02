@@ -11,7 +11,7 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
-import com.rdc.weflow_server.repository.project.CompanyRepository;
+import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
@@ -52,7 +52,7 @@ public class AdminProjectService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_COMPANY_NOT_FOUND));
 
         // 프로젝트 등록한 시스템 관리자 조회
-        Long creatorId = user.getUserId();
+        Long creatorId = user.getId();
 
         Project project = request.toEntity(company, creatorId);
         projectRepository.save(project);

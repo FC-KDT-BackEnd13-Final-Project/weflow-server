@@ -28,7 +28,7 @@ public class ProjectService {
 
         // 1) 유저가 속한 모든 프로젝트 목록 조회
         List<ProjectMember> memberships =
-                projectMemberRepository.findByUserIdFiltered(user.getUserId(), includeDeleted);
+                projectMemberRepository.findByUserIdFiltered(user.getId(), includeDeleted);
 
         // 2) 프로젝트 정보로 매핑
         return memberships.stream()
@@ -57,7 +57,7 @@ public class ProjectService {
         if (user.getRole() == UserRole.SYSTEM_ADMIN) return;
 
         boolean isMember =
-                projectMemberRepository.existsByProjectIdAndUserId(projectId, user.getUserId());
+                projectMemberRepository.existsByProjectIdAndUserId(projectId, user.getId());
 
         if (!isMember) {
             throw new BusinessException(ErrorCode.NO_PROJECT_PERMISSION);

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
+@RequestMapping("/api/projects/{projectId}/posts")
 public class PostController {
 
     private final PostService postService;
@@ -22,7 +23,7 @@ public class PostController {
     /**
      * 게시글 상세 조회 (1개)
      */
-    @GetMapping("/api/projects/{projectId}/posts/{postId}")
+    @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> getPost(@PathVariable Long projectId, @PathVariable Long postId) {
         PostDetailResponse response = postService.getPost(projectId, postId);
         return ResponseEntity.ok(ApiResponse.success("게시글 조회 성공", response));
@@ -31,7 +32,7 @@ public class PostController {
     /**
      * 게시글 리스트 조회
      */
-    @GetMapping("/api/projects/{projectId}/posts")
+    @GetMapping
     public ResponseEntity<ApiResponse<PostListResponse>> getPosts(
             @PathVariable Long projectId,
             @RequestParam(required = false) ProjectStatus projectStatus,
@@ -44,7 +45,7 @@ public class PostController {
     /**
      * 게시글 작성
      */
-    @PostMapping("/api/projects/{projectId}/posts")
+    @PostMapping
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @PathVariable Long projectId,
             @RequestBody PostCreateRequest request
@@ -56,7 +57,7 @@ public class PostController {
     /**
      * 게시글 수정
      */
-    @PatchMapping("/api/projects/{projectId}/posts/{postId}")
+    @PatchMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> updatePost(
             @PathVariable Long projectId,
             @PathVariable Long postId,
@@ -69,7 +70,7 @@ public class PostController {
     /**
      * 게시글 삭제 (Soft Delete)
      */
-    @DeleteMapping("/api/projects/{projectId}/posts/{postId}")
+    @DeleteMapping("/{postId}")
     public ResponseEntity<ApiResponse<Void>> deletePost(
             @PathVariable Long projectId,
             @PathVariable Long postId

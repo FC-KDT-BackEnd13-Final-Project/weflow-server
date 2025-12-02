@@ -44,4 +44,12 @@ public class StepRequest extends BaseEntity {
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<StepRequestHistory> histories = new ArrayList<>();
+
+    public void updateStatus(StepRequestStatus status) {
+        this.status = status;
+    }
+
+    public void updateDecidedAt(LocalDateTime decidedAt) {
+        this.decidedAt = decidedAt;
+    }
 }

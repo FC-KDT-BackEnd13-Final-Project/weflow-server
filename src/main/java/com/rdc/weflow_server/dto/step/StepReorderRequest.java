@@ -11,5 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class StepReorderRequest {
 
+    private Long projectId;
     private List<StepOrderItem> steps;
 }

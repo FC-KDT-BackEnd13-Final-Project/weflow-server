@@ -16,6 +16,7 @@ public class StepRequestHistoryResponse {
     private StepRequestHistory.HistoryType historyType;
     private String fieldName;
     private String beforeContent;
+    private String afterContent;
     private Long updatedBy;
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 }

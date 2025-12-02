@@ -16,5 +16,5 @@ public class StepRequestAnswerResponse {
     private StepRequestAnswerType response;
     private Long requestId;
     private Long respondedBy;
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 }

@@ -13,12 +13,12 @@ import java.time.LocalDateTime;
 public class StepRequestResponse {
 
     private Long id;
-    private String requestTitle;
-    private String requestDescription;
+    private String title;
+    private String description;
     private StepRequestStatus status;
     private LocalDateTime decidedAt;
     private Long stepId;
     private Long projectId;
     private Long requestedBy;
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 }

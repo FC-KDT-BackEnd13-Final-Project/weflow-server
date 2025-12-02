@@ -5,13 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import jakarta.validation.constraints.NotBlank;
 
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class StepRequestCreateRequest {
 
-    private String requestTitle;
-    private String requestDescription;
+    @NotBlank
+    private String title;
+    private String description;
     private List<Long> attachmentIds;
 }

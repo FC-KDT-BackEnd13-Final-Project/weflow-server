@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 public class StepRequestSummaryResponse {
 
     private Long id;
-    private String requestTitle;
+    private String title;
     private StepRequestStatus status;
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
     private LocalDateTime decidedAt;
     private Long stepId;
     private String stepTitle;

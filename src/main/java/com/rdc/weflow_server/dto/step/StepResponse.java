@@ -21,6 +21,6 @@ public class StepResponse {
     private StepStatus status;
     private Long projectId;
     private Long createdBy;
-    private LocalDateTime createdDate;
-    private LocalDateTime lastModifiedDate;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastModifiedAt;
 }

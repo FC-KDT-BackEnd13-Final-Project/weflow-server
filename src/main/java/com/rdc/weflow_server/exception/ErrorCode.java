@@ -25,6 +25,9 @@ public enum ErrorCode {
     // Comment
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_001", "댓글을 찾을 수 없습니다."),
 
+    // Project
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "PROJECT_001", "프로젝트를 찾을 수 없습니다."),
+
     // Step
     STEP_NOT_FOUND(HttpStatus.NOT_FOUND, "STEP_001", "단계를 찾을 수 없습니다."),
     STEP_ALREADY_EXISTS(HttpStatus.CONFLICT, "STEP_002", "이미 존재하는 단계입니다."),

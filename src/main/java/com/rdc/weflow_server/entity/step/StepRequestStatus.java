@@ -1,8 +1,10 @@
 package com.rdc.weflow_server.entity.step;
 
 public enum StepRequestStatus {
-    PENDING,
+
+    REQUESTED,
     APPROVED,
     REJECTED,
-    CHANGE_REQUESTED
+    CHANGE_REQUESTED,
+    CANCELED
 }

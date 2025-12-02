@@ -3,7 +3,11 @@ package com.rdc.weflow_server.entity.post;
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@NoArgsConstructor
 @Entity
 @Table(name = "post_answers")
 public class PostAnswer extends BaseEntity {

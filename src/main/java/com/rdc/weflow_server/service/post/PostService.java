@@ -16,6 +16,7 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
+import com.rdc.weflow_server.repository.post.PostAnswerRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
@@ -34,6 +35,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final AttachmentRepository attachmentRepository;
     private final PostQuestionRepository postQuestionRepository;
+    private final PostAnswerRepository postAnswerRepository;
     private final StepRepository stepRepository;
     private final UserRepository userRepository;
 
@@ -55,13 +57,13 @@ public class PostService {
                 .findByTargetTypeAndTargetId(Attachment.TargetType.POST, postId);
 
         // FILE 타입 필터링
-        List<PostDetailResponse.AttachmentDto> attachments = allAttachments.stream()
+        List<PostDetailResponse.FileDto> files = allAttachments.stream()
                 .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.FILE)
-                .map(a -> PostDetailResponse.AttachmentDto.builder()
-                        .id(a.getId())
+                .map(a -> PostDetailResponse.FileDto.builder()
+                        .fileId(a.getId())
                         .fileName(a.getFileName())
                         .fileSize(a.getFileSize())
-                        .filePath(a.getFilePath())
+                        .downloadUrl("/api/files/" + a.getId() + "/download")
                         .build())
                 .toList();
 
@@ -69,37 +71,93 @@ public class PostService {
         List<PostDetailResponse.LinkDto> links = allAttachments.stream()
                 .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.LINK)
                 .map(a -> PostDetailResponse.LinkDto.builder()
-                        .id(a.getId())
+                        .linkId(a.getId())
                         .url(a.getUrl())
+                        .title(null)  // Attachment 엔티티에 title 필드 없음
                         .build())
                 .toList();
 
         // 질문 조회
         List<PostQuestion> postQuestions = postQuestionRepository.findByPostId(postId);
         List<PostDetailResponse.QuestionDto> questions = postQuestions.stream()
-                .map(q -> PostDetailResponse.QuestionDto.builder()
-                        .id(q.getId())
-                        .questionText(q.getQuestionText())
-                        .confirmLabel(q.getConfirmLabel())
-                        .rejectLabel(q.getRejectLabel())
-                        .build())
+                .map(q -> {
+                    // 질문에 대한 답변 조회
+                    PostDetailResponse.AnswerDto answerDto = postAnswerRepository
+                            .findByQuestionId(q.getId())
+                            .map(answer -> PostDetailResponse.AnswerDto.builder()
+                                    .response(answer.getAnswerType().name())
+                                    .respondent(PostDetailResponse.RespondentDto.builder()
+                                            .memberId(answer.getUser().getId())
+                                            .name(answer.getUser().getName())
+                                            .build())
+                                    .respondedAt(answer.getCreatedDate())
+                                    .build())
+                            .orElse(null);
+
+                    return PostDetailResponse.QuestionDto.builder()
+                            .questionId(q.getId())
+                            .content(q.getQuestionText())
+                            .buttonLabels(PostDetailResponse.ButtonLabelsDto.builder()
+                                    .yes(q.getConfirmLabel())
+                                    .no(q.getRejectLabel())
+                                    .build())
+                            .answer(answerDto)
+                            .build();
+                })
                 .toList();
+
+        // 부모 게시글 정보
+        PostDetailResponse.ParentPostDto parentPostDto = null;
+        if (post.getParentPost() != null) {
+            Post parent = post.getParentPost();
+            String parentCompanyName = parent.getUser().getCompany() != null
+                    ? parent.getUser().getCompany().getName()
+                    : null;
+
+            parentPostDto = PostDetailResponse.ParentPostDto.builder()
+                    .postId(parent.getId())
+                    .title(parent.getTitle())
+                    .author(PostDetailResponse.AuthorDto.builder()
+                            .memberId(parent.getUser().getId())
+                            .name(parent.getUser().getName())
+                            .role(parent.getUser().getRole().name())
+                            .companyName(parentCompanyName)
+                            .build())
+                    .build();
+        }
+
+        // 작성자 정보
+        String companyName = post.getUser().getCompany() != null
+                ? post.getUser().getCompany().getName()
+                : null;
+
+        // 수정 여부
+        boolean isEdited = !post.getCreatedDate().equals(post.getLastModifiedDate());
 
         // Response 생성
         return PostDetailResponse.builder()
-                .id(post.getId())
+                .postId(post.getId())
                 .title(post.getTitle())
                 .content(post.getContent())
+                .status(post.getStatus())
                 .author(PostDetailResponse.AuthorDto.builder()
-                        .id(post.getUser().getId())
+                        .memberId(post.getUser().getId())
                         .name(post.getUser().getName())
-                        .email(post.getUser().getEmail())
+                        .role(post.getUser().getRole().name())
+                        .companyName(companyName)
                         .build())
-                .createdAt(post.getCreatedDate())
-                .updatedAt(post.getLastModifiedDate())
-                .attachments(attachments)
+                .projectStatus(post.getStep().getProject().getStatus())
+                .step(PostDetailResponse.StepDto.builder()
+                        .stepId(post.getStep().getId())
+                        .stepName(post.getStep().getTitle())
+                        .build())
+                .files(files)
                 .links(links)
                 .questions(questions)
+                .parentPost(parentPostDto)
+                .isEdited(isEdited)
+                .createdAt(post.getCreatedDate())
+                .updatedAt(post.getLastModifiedDate())
                 .build();
     }
 

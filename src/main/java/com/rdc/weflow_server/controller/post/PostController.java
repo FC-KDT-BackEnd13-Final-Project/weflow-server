@@ -23,9 +23,9 @@ public class PostController {
      * 게시글 상세 조회 (1개)
      */
     @GetMapping("/api/projects/{projectId}/posts/{postId}")
-    public ResponseEntity<PostDetailResponse> getPost(@PathVariable Long projectId, @PathVariable Long postId) {
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPost(@PathVariable Long projectId, @PathVariable Long postId) {
         PostDetailResponse response = postService.getPost(projectId, postId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success("게시글 조회 성공", response));
     }
 
     /**

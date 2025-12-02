@@ -1,5 +1,6 @@
 package com.rdc.weflow_server.service.post;
 
+import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostCreateResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
@@ -22,6 +23,7 @@ import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -256,9 +258,11 @@ public class PostService {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
-        // User 조회
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        // JWT에서 현재 인증된 사용자 정보 가져오기
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        User user = userDetails.getUser();
 
         // ParentPost 조회 (답글인 경우)
         Post parentPost = null;

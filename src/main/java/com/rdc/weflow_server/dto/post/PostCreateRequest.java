@@ -15,7 +15,6 @@ public class PostCreateRequest {
     private String title;
     private String content;
     private Long stepId;
-    private Long userId; // TODO: 나중에 JWT 인증으로 대체
     private Long parentPostId; // 답글인 경우
     private ProjectStatus projectStatus;
     private List<FileRequest> files;

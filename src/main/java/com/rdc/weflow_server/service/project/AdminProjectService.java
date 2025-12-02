@@ -15,6 +15,7 @@ import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.step.StepService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,7 @@ public class AdminProjectService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final StepService stepService;
 
     // 관리자 체크 공통 메소드
     private static void validateAdmin(CustomUserDetails user) {
@@ -54,6 +56,10 @@ public class AdminProjectService {
 
         Project project = request.toEntity(company, creatorId);
         projectRepository.save(project);
+
+        // 프로젝트 생성 시 기본 단계 자동 생성 (IN_PROGRESS 상위 흐름 하에 카테고리 순서대로)
+        User creator = userRepository.findById(creatorId).orElse(null);
+        stepService.createDefaultStepsForProject(project, creator);
 
         return AdminProjectCreateResponseDto.from(project);
     }
@@ -142,14 +148,14 @@ public class AdminProjectService {
 
     // 프로젝트 멤버 추가
     public AdminProjectMemberAddResponseDto addProjectMember(Long projectId, AdminProjectMemberAddRequestDto request, CustomUserDetails user) {
-    
+
         // 1) 관리자만 가능
         validateAdmin(user);
 
         // 2) 프로젝트 조회
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
-        
+
         // 3) 유저 조회
         User targetUser = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

@@ -8,38 +8,27 @@ import lombok.*;
 @Getter
 @Builder
 @Entity
-@Table(name = "step_request_answer")
+@Table(name = "step_request_answers")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class StepRequestAnswer extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;    // 승인 응답 ID
 
-    /** 응답 종류: APPROVE, REJECT, CHANGE_REQUEST */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private ResponseType response;
+    private StepRequestAnswerType response;   // 응답 종류
 
-    /** 사유 (REJECT, CHANGE_REQUEST 시 주로 사용) */
     @Column(columnDefinition = "TEXT")
-    private String reasonText;
+    private String reasonText;  // 사유
 
-    /** 어떤 승인요청에 대한 응답인지 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "step_request_id", nullable = false)
-    private StepRequest stepRequest;
+    private StepRequest stepRequest;    // 승인 요청 ID
 
-    /** 응답자 (관리자 또는 고객사 담당자) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responded_by", nullable = false)
-    private User respondedBy;
-
-    // ENUM
-    public enum ResponseType {
-        APPROVE,
-        REJECT,
-        CHANGE_REQUEST
-    }
+    private User respondedBy;   // 응답자 ID
 }

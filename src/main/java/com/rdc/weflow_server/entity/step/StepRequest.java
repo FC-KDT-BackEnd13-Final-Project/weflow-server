@@ -19,42 +19,37 @@ public class StepRequest extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;    // 승인 요청 ID
 
-    /** 요청 제목 */
     @Column(name = "request_title", nullable = false, length = 255)
-    private String requestTitle;
+    private String requestTitle;    // 요청 제목
 
-    /** 요청 설명 */
     @Column(name = "request_description", columnDefinition = "TEXT")
-    private String requestDescription;
+    private String requestDescription;  // 요청 설명
 
-    /** 승인 요청 상태 */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Status status;
+    private StepRequestStatus status;  // 승인 요청 상태
 
-    /** 승인/거절된 시각 */
-    private LocalDateTime decidedAt;
+    private LocalDateTime decidedAt;    // 승인/거절일
 
-    /** 어떤 단계(step)에 대한 승인요청인지 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "step_id", nullable = false)
-    private Step step;
+    private Step step;  // 단계 ID
 
-    /** 승인 요청자 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by", nullable = false)
-    private User requestedBy;
-
-    // --- ENUM 정의 ---
-    public enum Status {
-        REQUESTED,
-        APPROVED,
-        REJECTED,
-        CHANGE_REQUEST
-    }
+    private User requestedBy;   // 승인 요청자 ID
 
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<StepRequestHistory> histories = new ArrayList<>();
+
+    public void updateStatus(StepRequestStatus status) {
+        this.status = status;
+    }
+
+    public void updateDecidedAt(LocalDateTime decidedAt) {
+        this.decidedAt = decidedAt;
+    }
 }

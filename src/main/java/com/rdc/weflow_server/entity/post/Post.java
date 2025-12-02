@@ -22,7 +22,7 @@ public class Post extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // 게시글 ID
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String title; // 제목
 
     @Column(columnDefinition = "TEXT", nullable = false)

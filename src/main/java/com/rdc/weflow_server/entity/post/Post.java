@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.entity.post;
 
 import com.rdc.weflow_server.entity.BaseEntity;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
@@ -27,6 +28,9 @@ public class Post extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content; // 내용
 
+    @Column
+    private ProjectStatus projectStatus; // 게시글이 어떤 phase에 속해있는지 계약-진행-납품-유지보수
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PostApprovalStatus status; // NORMAL, WAITING_CONFIRM, CONFIRMED, REJECTED, DELETED
@@ -45,7 +49,7 @@ public class Post extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "step_id")
-    private Step step;   // 단계 ID
+    private Step step; // 단계 ID
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

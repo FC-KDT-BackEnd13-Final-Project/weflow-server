@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.service.post;
 
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
+import com.rdc.weflow_server.dto.post.PostCreateResponse;
 import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
@@ -10,7 +11,7 @@ import com.rdc.weflow_server.entity.post.Post;
 import com.rdc.weflow_server.entity.post.PostApprovalStatus;
 import com.rdc.weflow_server.entity.post.PostOpenStatus;
 import com.rdc.weflow_server.entity.post.PostQuestion;
-import com.rdc.weflow_server.entity.step.Phase;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
@@ -165,14 +166,14 @@ public class PostService {
      * 게시글 list 조회
      * TODO: 나중에 동적 쿼리 (Querydsl 등으로 refactoring 할 필요 있음)
      */
-    public PostListResponse getPosts(Long projectId, Phase phase, Long stepId) {
+    public PostListResponse getPosts(Long projectId, ProjectStatus projectStatus, Long stepId) {
         List<Post> posts;
 
         // 필터에 따라 게시글 조회
         if (stepId != null) {
             posts = postRepository.findByStepId(stepId);
-        } else if (phase != null) {
-            posts = postRepository.findByStepProjectIdAndStepPhase(projectId, phase);
+        } else if (projectStatus != null) {
+            posts = postRepository.findByStepProjectIdAndStepProjectStatus(projectId, projectStatus);
         } else {
             posts = postRepository.findByStepProjectId(projectId);
         }
@@ -246,7 +247,7 @@ public class PostService {
      * 게시글 작성
      */
     @Transactional
-    public PostDetailResponse createPost(Long projectId, PostCreateRequest request) {
+    public PostCreateResponse createPost(Long projectId, PostCreateRequest request) {
         // Step 조회 및 검증
         Step step = stepRepository.findById(request.getStepId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_NOT_FOUND));
@@ -278,22 +279,24 @@ public class PostService {
                 .content(request.getContent())
                 .status(status)
                 .openStatus(PostOpenStatus.OPEN)
+                .projectStatus(request.getProjectStatus())
                 .step(step)
                 .user(user)
                 .parentPost(parentPost)
                 .build();
         post = postRepository.save(post);
 
-        // Attachments 저장 (FILE)
-        if (request.getAttachments() != null) {
-            for (PostCreateRequest.AttachmentRequest attachmentReq : request.getAttachments()) {
+        // Files 저장 (FILE)
+        if (request.getFiles() != null) {
+            for (PostCreateRequest.FileRequest fileReq : request.getFiles()) {
                 Attachment attachment = Attachment.builder()
                         .targetType(Attachment.TargetType.POST)
                         .targetId(post.getId())
                         .attachmentType(Attachment.AttachmentType.FILE)
-                        .fileName(attachmentReq.getFileName())
-                        .fileSize(attachmentReq.getFileSize())
-                        .filePath(attachmentReq.getFilePath())
+                        .fileName(fileReq.getFileName())
+                        .fileSize(fileReq.getFileSize())
+                        .filePath(fileReq.getFilePath())
+                        .contentType(fileReq.getContentType())
                         .build();
                 attachmentRepository.save(attachment);
             }
@@ -325,8 +328,10 @@ public class PostService {
             }
         }
 
-        // 생성된 게시글 상세 정보 반환
-        return getPost(projectId, post.getId());
+        // 생성된 게시글 ID 반환
+        return PostCreateResponse.builder()
+                .postId(post.getId())
+                .build();
     }
 
     /**
@@ -351,23 +356,24 @@ public class PostService {
             post.updateContent(request.getContent());
         }
 
-        // 기존 첨부파일 삭제
-        if (request.getAttachments() != null) {
+        // 기존 파일 삭제
+        if (request.getFiles() != null) {
             attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
                     Attachment.TargetType.POST,
                     postId,
                     Attachment.AttachmentType.FILE
             );
 
-            // 새 첨부파일 저장
-            for (PostUpdateRequest.AttachmentRequest attachmentReq : request.getAttachments()) {
+            // 새 파일 저장
+            for (PostUpdateRequest.FileRequest fileReq : request.getFiles()) {
                 Attachment attachment = Attachment.builder()
                         .targetType(Attachment.TargetType.POST)
                         .targetId(postId)
                         .attachmentType(Attachment.AttachmentType.FILE)
-                        .fileName(attachmentReq.getFileName())
-                        .fileSize(attachmentReq.getFileSize())
-                        .filePath(attachmentReq.getFilePath())
+                        .fileName(fileReq.getFileName())
+                        .fileSize(fileReq.getFileSize())
+                        .filePath(fileReq.getFilePath())
+                        .contentType(fileReq.getContentType())
                         .build();
                 attachmentRepository.save(attachment);
             }

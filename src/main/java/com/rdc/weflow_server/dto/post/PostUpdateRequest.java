@@ -13,17 +13,18 @@ public class PostUpdateRequest {
 
     private String title;
     private String content;
-    private List<AttachmentRequest> attachments;
+    private List<FileRequest> files;
     private List<LinkRequest> links;
     private List<QuestionRequest> questions;
 
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class AttachmentRequest {
+    public static class FileRequest {
         private String fileName;
         private Long fileSize;
         private String filePath;
+        private String contentType;
     }
 
     @Getter

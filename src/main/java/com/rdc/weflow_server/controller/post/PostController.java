@@ -2,11 +2,12 @@ package com.rdc.weflow_server.controller.post;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
+import com.rdc.weflow_server.dto.post.PostCreateResponse;
 import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
-import com.rdc.weflow_server.entity.step.Phase;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.post.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,10 +35,10 @@ public class PostController {
     @GetMapping("/api/projects/{projectId}/posts")
     public ResponseEntity<ApiResponse<PostListResponse>> getPosts(
             @PathVariable Long projectId,
-            @RequestParam(required = false) Phase phase,
+            @RequestParam(required = false) ProjectStatus projectStatus,
             @RequestParam(required = false) Long stepId
     ) {
-        PostListResponse response = postService.getPosts(projectId, phase, stepId);
+        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId);
         return ResponseEntity.ok(ApiResponse.success("게시글 목록 조회 성공", response));
     }
 
@@ -45,12 +46,12 @@ public class PostController {
      * 게시글 작성
      */
     @PostMapping("/api/projects/{projectId}/posts")
-    public ResponseEntity<PostDetailResponse> createPost(
+    public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @PathVariable Long projectId,
             @RequestBody PostCreateRequest request
     ) {
-        PostDetailResponse response = postService.createPost(projectId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        PostCreateResponse response = postService.createPost(projectId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("게시글 작성 성공", response));
     }
 
     /**

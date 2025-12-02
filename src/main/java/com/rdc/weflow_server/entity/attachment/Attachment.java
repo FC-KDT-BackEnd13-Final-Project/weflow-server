@@ -32,7 +32,7 @@ public class Attachment extends BaseEntity {
 
     /** 실제 저장 경로 (파일일 경우) */
     @Column(name = "file_path", length = 500)
-    private String filePath;
+    private String filePath; // S3 경로
 
     /** 원본 파일명 */
     @Column(name = "file_name", length = 255)
@@ -41,6 +41,10 @@ public class Attachment extends BaseEntity {
     /** 파일 크기 */
     @Column(name = "file_size")
     private Long fileSize;
+
+    /** 파일 MIME 타입 (파일일 경우) */
+    @Column(name = "content_type", length = 100)
+    private String contentType;
 
     /** 링크 주소 (링크 타입일 경우) */
     @Column(name = "url", length = 1000)

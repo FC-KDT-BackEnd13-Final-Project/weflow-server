@@ -25,9 +25,6 @@ public enum ErrorCode {
     // Comment
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_001", "댓글을 찾을 수 없습니다."),
 
-    // Project
-    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "PROJECT_001", "프로젝트를 찾을 수 없습니다."),
-
     // Step
     STEP_NOT_FOUND(HttpStatus.NOT_FOUND, "STEP_001", "단계를 찾을 수 없습니다."),
     STEP_ALREADY_EXISTS(HttpStatus.CONFLICT, "STEP_002", "이미 존재하는 단계입니다."),
@@ -62,7 +59,8 @@ public enum ErrorCode {
     PROJECT_MEMBER_REMOVE_FORBIDDEN(HttpStatus.FORBIDDEN, "PROJECT_MEMBER_004", "프로젝트 멤버 삭제 권한이 없습니다."),
     PROJECT_MEMBER_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "PROJECT_MEMBER_005", "프로젝트에 추가할 사용자를 찾을 수 없습니다."),
     PROJECT_MEMBER_ROLE_INVALID(HttpStatus.BAD_REQUEST, "PROJECT_MEMBER_006", "유효하지 않은 프로젝트 역할입니다."),
-    PROJECT_MEMBER_ALREADY_REMOVED(HttpStatus.BAD_REQUEST, "PROJECT_MEMBER_007", "이미 삭제된 멤버입니다.");
+    PROJECT_MEMBER_ALREADY_REMOVED(HttpStatus.BAD_REQUEST, "PROJECT_MEMBER_007", "이미 삭제된 멤버입니다."),
+
     // Checklist
     CHECKLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "CHECKLIST_001", "체크리스트를 찾을 수 없습니다."),
     CHECKLIST_LOCKED(HttpStatus.BAD_REQUEST, "CHECKLIST_002", "잠금 처리된 체크리스트는 수정할 수 없습니다."),

@@ -4,11 +4,11 @@ import com.rdc.weflow_server.dto.step.StepRequestHistoryListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestHistoryResponse;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
+import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
-import com.rdc.weflow_server.entity.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +28,8 @@ public class StepRequestHistoryService {
         // 요청 존재 여부만 선확인 (삭제된 Step라도 Request 히스토리는 그대로 조회 가능)
         stepRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
+
+        // TODO: 히스토리 조회는 "프로젝트 멤버(개발사/고객사 모두)"만 가능
 
         List<StepRequestHistory> histories;
         if (sort == null || "asc".equalsIgnoreCase(sort)) {

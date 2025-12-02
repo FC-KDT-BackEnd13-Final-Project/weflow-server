@@ -6,8 +6,8 @@ import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepRequest;
-import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
+import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
@@ -32,7 +32,11 @@ public class StepRequestService {
     private final UserRepository userRepository;
 
     public StepRequestResponse createRequest(Long stepId, Long currentUserId, StepRequestCreateRequest request) {
-        // 삭제된 Step이면 승인요청 생성 불가
+        // TODO: 이 유저가 "개발사 멤버"인지 확인
+        // 1) user.getRole() 이 UserRole.AGENCY (또는 SYSTEM_ADMIN) 인지 확인
+        // 2) projectMemberRepository.findByProjectIdAndUserId(...) 로
+        //    해당 프로젝트의 멤버인지 확인
+        // 3) 아니면 ErrorCode.FORBIDDEN
         Step step = stepService.getStepOrThrow(stepId);
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -97,6 +101,8 @@ public class StepRequestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // TODO: 요청자 본인 or 개발사 ADMIN만 취소 가능하도록 권한 체크 추가 예정
 
         if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
             throw new BusinessException(ErrorCode.STEP_REQUEST_CANNOT_CANCEL);

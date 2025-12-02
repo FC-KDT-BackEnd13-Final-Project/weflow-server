@@ -7,7 +7,9 @@ import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
+import com.rdc.weflow_server.entity.step.StepCategory;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
@@ -35,8 +37,14 @@ public class StepService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
-    private void checkManagerPermission(Long currentUserId, Project project) {
-        // TODO: 프로젝트 멤버/권한 구현 들어오면 실제 DEV_MANAGER 여부 체크
+    private void checkProjectAdminPermission(Long currentUserId, Project project) {
+        // TODO: 현재 사용자가 이 프로젝트의 "개발사 ADMIN"인지 확인
+        // 1) user = userRepository.findById(currentUserId)
+        //    - user.getRole() == UserRole.SYSTEM_ADMIN 이면 바로 허용
+        // 2) member = projectMemberRepository.findByProjectIdAndUserIdAndDeletedAtIsNull(...)
+        //    - member.getCompanyType() == CompanyType.AGENCY
+        //    - member.getRole() == ProjectMemberRole.ADMIN 인 경우만 허용
+        // 3) 그 외에는 ErrorCode.FORBIDDEN 던지기
     }
 
     // 프로젝트 단계 목록 조회
@@ -68,11 +76,7 @@ public class StepService {
         Project project = getProjectOrThrow(projectId);
         User user = getUserOrThrow(currentUserId);
 
-        checkManagerPermission(currentUserId, project);
-
-        if (request.getPhase() == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
+        checkProjectAdminPermission(currentUserId, project);
 
         if (stepRepository.existsByProject_IdAndTitleIgnoreCaseAndDeletedAtIsNull(projectId, request.getTitle())) {
             throw new BusinessException(ErrorCode.STEP_ALREADY_EXISTS);
@@ -80,9 +84,12 @@ public class StepService {
 
         Integer orderIndex = resolveOrderIndex(projectId, request.getOrderIndex());
         StepStatus status = request.getStatus() != null ? request.getStatus() : StepStatus.PENDING;
+        StepCategory category = request.getCategory() != null ? request.getCategory() : StepCategory.REQUIREMENTS;
+        ProjectStatus phase = ProjectStatus.IN_PROGRESS;
 
         Step step = Step.builder()
-                .phase(request.getPhase())
+                .phase(phase)
+                .category(category)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .orderIndex(orderIndex)
@@ -95,16 +102,42 @@ public class StepService {
         return toStepResponse(saved);
     }
 
+    // 프로젝트 생성 시 기본 단계 생성 (IN_PROGRESS 상위 흐름 하에 카테고리 순서대로 삽입)
+    public void createDefaultStepsForProject(Project project, User creator) {
+        if (project == null || project.getId() == null) {
+            return;
+        }
+        // 이미 단계가 있다면 중복 생성하지 않는다.
+        List<Step> existing = stepRepository.findByProject_IdAndDeletedAtIsNullOrderByOrderIndexAsc(project.getId());
+        if (!existing.isEmpty()) {
+            return;
+        }
+
+        ProjectStatus phase = ProjectStatus.IN_PROGRESS;
+        StepStatus status = StepStatus.PENDING;
+
+        List<Step> defaults = List.of(
+                buildDefaultStep(project, creator, phase, status, StepCategory.REQUIREMENTS, 1, "요구사항 정의"),
+                buildDefaultStep(project, creator, phase, status, StepCategory.UI_PLANNING, 2, "화면 설계"),
+                buildDefaultStep(project, creator, phase, status, StepCategory.DESIGN, 3, "디자인"),
+                buildDefaultStep(project, creator, phase, status, StepCategory.PUBLISHING, 4, "퍼블리싱"),
+                buildDefaultStep(project, creator, phase, status, StepCategory.DEVELOPMENT, 5, "개발"),
+                buildDefaultStep(project, creator, phase, status, StepCategory.QA, 6, "검수")
+        );
+
+        stepRepository.saveAll(defaults);
+    }
+
     /* 단계 수정 (개발사 관리자)
     - PENDING: 자유롭게 수정
-    - IN_PROGRESS: 삭제/순서 변경 막고, 이름/설명 수정 허용 (Phase는 시스템 고정값으로 수정 불가)
+    - IN_PROGRESS: 삭제/순서 변경 막고, 이름/설명 수정 허용 (상위 카테고리/프로젝트 상태는 수정 불가)
     - WAITING_APPROVAL, APPROVED: 수정 불가
      */
     public StepResponse updateStep(Long stepId, Long currentUserId, StepUpdateRequest request) {
         Step step = getStepOrThrow(stepId);
         User user = getUserOrThrow(currentUserId);
 
-        checkManagerPermission(currentUserId, step.getProject());
+        checkProjectAdminPermission(currentUserId, step.getProject());
 
         StepStatus currentStatus = step.getStatus();
 
@@ -124,6 +157,9 @@ public class StepService {
         if (request.getDescription() != null) {
             step.updateDescription(request.getDescription());
         }
+        if (request.getCategory() != null) {
+            step.updateCategory(request.getCategory());
+        }
 
         return toStepResponse(step);
     }
@@ -138,7 +174,7 @@ public class StepService {
         Step step = getStepOrThrow(stepId);
         User user = getUserOrThrow(currentUserId);
 
-        checkManagerPermission(currentUserId, step.getProject());
+        checkProjectAdminPermission(currentUserId, step.getProject());
 
         StepStatus status = step.getStatus();
         if (status != StepStatus.PENDING) {
@@ -157,7 +193,7 @@ public class StepService {
         User user = getUserOrThrow(currentUserId);
         Project project = getProjectOrThrow(projectID);
 
-        checkManagerPermission(currentUserId, project);
+        checkProjectAdminPermission(currentUserId, project);
 
         List<StepOrderItem> orderItems = request.getSteps();
         if (orderItems == null || orderItems.isEmpty()) {
@@ -241,6 +277,7 @@ public class StepService {
         return StepResponse.builder()
                 .id(step.getId())
                 .phase(step.getPhase())
+                .category(step.getCategory())
                 .title(step.getTitle())
                 .description(step.getDescription())
                 .orderIndex(step.getOrderIndex())
@@ -248,7 +285,28 @@ public class StepService {
                 .projectId(step.getProject() != null ? step.getProject().getId() : null)
                 .createdBy(step.getCreatedBy() != null ? step.getCreatedBy().getId() : null)
                 .createdAt(step.getCreatedAt())
-                .lastModifiedAt(step.getLastModifiedAt())
+                .updatedAt(step.getUpdatedAt())
+                .build();
+    }
+
+    private Step buildDefaultStep(
+            Project project,
+            User creator,
+            ProjectStatus phase,
+            StepStatus status,
+            StepCategory category,
+            Integer orderIndex,
+            String title
+    ) {
+        return Step.builder()
+                .phase(phase)
+                .category(category)
+                .title(title)
+                .description(null)
+                .orderIndex(orderIndex)
+                .status(status)
+                .project(project)
+                .createdBy(creator)
                 .build();
     }
 }

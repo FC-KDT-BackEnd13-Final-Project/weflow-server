@@ -1,12 +1,11 @@
 package com.rdc.weflow_server.dto.step;
 
-import com.rdc.weflow_server.entity.step.Phase;
+import com.rdc.weflow_server.entity.step.StepCategory;
 import com.rdc.weflow_server.entity.step.StepStatus;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 @Getter
 @NoArgsConstructor
@@ -16,8 +15,7 @@ public class StepCreateRequest {
     @NotBlank
     private String title;
     private String description;
-    @NotNull
-    private Phase phase;
+    private StepCategory category;
     private Integer orderIndex;
     private StepStatus status;
 }

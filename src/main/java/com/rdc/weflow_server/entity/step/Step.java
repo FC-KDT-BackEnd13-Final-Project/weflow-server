@@ -2,7 +2,9 @@ package com.rdc.weflow_server.entity.step;
 
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.step.StepCategory;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,10 +39,14 @@ public class Step extends BaseEntity {
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private Phase phase; // 상위 카테고리
+    private ProjectStatus phase; // 상위 카테고리
 
     @Column(nullable = false)
     private String title; // 단계 이름(요구사항, 기획, 디자인, 퍼블리싱, 개발 등)
+
+    @Column
+    @Enumerated(EnumType.STRING)
+    private StepCategory category; // 단계 종류 (요구사항 정의, 화면 설계, 디자인 등)
 
     @Column
     private String description; // 설명
@@ -74,5 +80,9 @@ public class Step extends BaseEntity {
 
     public void updateOrderIndex(Integer orderIndex) {
         this.orderIndex = orderIndex;
+    }
+
+    public void updateCategory(StepCategory category) {
+        this.category = category;
     }
 }

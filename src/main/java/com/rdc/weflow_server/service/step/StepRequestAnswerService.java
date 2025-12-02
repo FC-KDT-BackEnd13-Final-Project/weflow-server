@@ -36,6 +36,10 @@ public class StepRequestAnswerService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // TODO: 승인/반려는 "고객사 멤버(MEMBER)"만 가능
+        //  - user.role == CLIENT
+        //  - ProjectMember 존재 여부 확인
+
         // 삭제된 단계에 속한 승인요청은 더 이상 승인/반려 처리할 수 없음
         if (stepRequest.getStep() == null || stepRequest.getStep().getDeletedAt() != null) {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);

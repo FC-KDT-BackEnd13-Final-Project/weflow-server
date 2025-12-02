@@ -1,11 +1,14 @@
-package com.rdc.weflow_server.controller;
+package com.rdc.weflow_server.controller.step;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.step.StepRequestCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.service.step.StepRequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,22 +18,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequiredArgsConstructor
 @Validated
 @RequestMapping("/api")
 public class StepRequestController {
 
-    private static final Long CURRENT_USER_ID = 1L;
-
     private final StepRequestService stepRequestService;
 
     @PostMapping("/steps/{stepId}/requests")
     public ApiResponse<StepRequestResponse> createRequest(@PathVariable Long stepId,
+                                                          @AuthenticationPrincipal CustomUserDetails user,
                                                           @RequestBody @Valid StepRequestCreateRequest request) {
-        StepRequestResponse response = stepRequestService.createRequest(stepId, CURRENT_USER_ID, request);
+        StepRequestResponse response = stepRequestService.createRequest(stepId, user.getId(), request);
         return ApiResponse.success("stepRequest.create.success", response);
     }
 
@@ -53,8 +53,9 @@ public class StepRequestController {
     }
 
     @DeleteMapping("/requests/{requestId}")
-    public ApiResponse<Void> cancelRequest(@PathVariable Long requestId) {
-        stepRequestService.cancelRequest(requestId, CURRENT_USER_ID);
+    public ApiResponse<Void> cancelRequest(@PathVariable Long requestId,
+                                           @AuthenticationPrincipal CustomUserDetails user) {
+        stepRequestService.cancelRequest(requestId, user.getId());
         return ApiResponse.success("stepRequest.cancel.success", null);
     }
 }

@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.controller;
+package com.rdc.weflow_server.controller.step;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.step.StepListResponse;

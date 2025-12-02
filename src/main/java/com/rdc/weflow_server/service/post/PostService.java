@@ -21,13 +21,11 @@ import com.rdc.weflow_server.repository.post.PostAnswerRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
-import com.rdc.weflow_server.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -39,7 +37,6 @@ public class PostService {
     private final PostQuestionRepository postQuestionRepository;
     private final PostAnswerRepository postAnswerRepository;
     private final StepRepository stepRepository;
-    private final UserRepository userRepository;
 
     /**
      * 게시글 상세 조회
@@ -346,6 +343,14 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
+        // 작성자 권한 검증
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        if (!post.getUser().getId().equals(userDetails.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
         // projectId 검증
         if (!post.getStep().getProject().getId().equals(projectId)) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
@@ -436,6 +441,14 @@ public class PostService {
         // Post 조회 및 검증
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // 작성자 권한 검증
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        if (!post.getUser().getId().equals(userDetails.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
 
         // projectId 검증
         if (!post.getStep().getProject().getId().equals(projectId)) {

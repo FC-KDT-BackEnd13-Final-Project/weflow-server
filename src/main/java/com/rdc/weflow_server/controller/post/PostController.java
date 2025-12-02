@@ -1,5 +1,6 @@
 package com.rdc.weflow_server.controller.post;
 
+import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
@@ -11,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -33,13 +32,13 @@ public class PostController {
      * 게시글 리스트 조회
      */
     @GetMapping("/api/projects/{projectId}/posts")
-    public ResponseEntity<List<PostListResponse>> getPosts(
+    public ResponseEntity<ApiResponse<PostListResponse>> getPosts(
             @PathVariable Long projectId,
             @RequestParam(required = false) Phase phase,
             @RequestParam(required = false) Long stepId
     ) {
-        List<PostListResponse> responses = postService.getPosts(projectId, phase, stepId);
-        return ResponseEntity.ok(responses);
+        PostListResponse response = postService.getPosts(projectId, phase, stepId);
+        return ResponseEntity.ok(ApiResponse.success("게시글 목록 조회 성공", response));
     }
 
     /**

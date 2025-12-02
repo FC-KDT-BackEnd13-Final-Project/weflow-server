@@ -107,7 +107,7 @@ public class PostService {
      * 게시글 list 조회
      * TODO: 나중에 동적 쿼리 (Querydsl 등으로 refactoring 할 필요 있음)
      */
-    public List<PostListResponse> getPosts(Long projectId, Phase phase, Long stepId) {
+    public PostListResponse getPosts(Long projectId, Phase phase, Long stepId) {
         List<Post> posts;
 
         // 필터에 따라 게시글 조회
@@ -120,34 +120,68 @@ public class PostService {
         }
 
         // PostListResponse로 변환
-        return posts.stream()
+        List<PostListResponse.PostItem> postItems = posts.stream()
                 .map(post -> {
-                    // 파일 갯수 조회
-                    int fileCount = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
+                    // 파일 존재 여부
+                    boolean hasFiles = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
                             Attachment.TargetType.POST,
                             post.getId(),
                             Attachment.AttachmentType.FILE
-                    );
+                    ) > 0;
 
-                    // 댓글 갯수 (children 리스트 크기)
+                    // 링크 존재 여부
+                    boolean hasLinks = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
+                            Attachment.TargetType.POST,
+                            post.getId(),
+                            Attachment.AttachmentType.LINK
+                    ) > 0;
+
+                    // 질문 존재 여부
+                    boolean hasQuestions = postQuestionRepository.findByPostId(post.getId()).size() > 0;
+
+                    // 댓글 갯수 (children 리스트에서 parentPost가 있는 것만)
                     int commentCount = post.getChildren().size();
 
-                    return PostListResponse.builder()
-                            .id(post.getId())
+                    // 답글 갯수 (children의 children)
+                    int replyCount = post.getChildren().stream()
+                            .mapToInt(child -> child.getChildren().size())
+                            .sum();
+
+                    // 수정 여부 (생성일과 수정일이 다르면 수정됨)
+                    boolean isEdited = !post.getCreatedDate().equals(post.getLastModifiedDate());
+
+                    // 작성자 정보
+                    String companyName = post.getUser().getCompany() != null
+                            ? post.getUser().getCompany().getName()
+                            : null;
+
+                    return PostListResponse.PostItem.builder()
+                            .postId(post.getId())
                             .title(post.getTitle())
-                            .author(PostDetailResponse.AuthorDto.builder()
-                                    .id(post.getUser().getId())
-                                    .name(post.getUser().getName())
-                                    .email(post.getUser().getEmail())
-                                    .build())
-                            .createdAt(post.getCreatedDate())
-                            .openStatus(post.getOpenStatus())
                             .status(post.getStatus())
-                            .fileCount(fileCount)
+                            .projectStatus(post.getStep().getProject().getStatus())
+                            .stepId(post.getStep().getId())
+                            .author(PostListResponse.AuthorDto.builder()
+                                    .memberId(post.getUser().getId())
+                                    .name(post.getUser().getName())
+                                    .role(post.getUser().getRole().name())
+                                    .companyName(companyName)
+                                    .build())
+                            .hasFiles(hasFiles)
+                            .hasLinks(hasLinks)
+                            .hasQuestions(hasQuestions)
                             .commentCount(commentCount)
+                            .replyCount(replyCount)
+                            .isEdited(isEdited)
+                            .createdAt(post.getCreatedDate())
+                            .updatedAt(post.getLastModifiedDate())
                             .build();
                 })
                 .toList();
+
+        return PostListResponse.builder()
+                .posts(postItems)
+                .build();
     }
 
     /**

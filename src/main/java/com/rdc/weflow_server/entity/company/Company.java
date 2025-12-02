@@ -1,14 +1,14 @@
 package com.rdc.weflow_server.entity.company;
 
-
 import com.rdc.weflow_server.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Getter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "companies")
 @Entity
 public class Company extends BaseEntity {
@@ -21,7 +21,7 @@ public class Company extends BaseEntity {
     private String name;
 
     @Column(unique = true)
-    private String BusinessNumber;
+    private String businessNumber;
 
     @Column
     private String representative;
@@ -39,5 +39,4 @@ public class Company extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private CompanyStatus status;
-
 }

@@ -41,4 +41,8 @@ public class ChecklistAnswer extends BaseEntity {
     /** 답변 작성 시각 */
     @Column(name = "answered_at", nullable = false)
     private LocalDateTime answeredAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checklist_id", nullable = false)
+    private Checklist checklist;
 }

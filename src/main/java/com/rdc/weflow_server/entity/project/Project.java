@@ -3,6 +3,8 @@ package com.rdc.weflow_server.entity.project;
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.company.Company;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +16,8 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name = "projects")
 @Entity
+@AllArgsConstructor
+@Builder
 public class Project extends BaseEntity {
 
     @Id
@@ -45,6 +49,9 @@ public class Project extends BaseEntity {
     @Column
     private String contractFileUrl; // 계약서 파일 경로
 
+    @Column(name = "created_by", nullable = false)
+    private Long createdBy;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
@@ -52,4 +59,25 @@ public class Project extends BaseEntity {
     @OneToMany(mappedBy = "project")
     private List<ProjectMember> projectMembers;
 
+    public void updateProject(
+            String name,
+            String description,
+            ProjectStatus status,
+            LocalDateTime startDate,
+            LocalDateTime endDateExpected,
+            LocalDateTime endDate,
+            BigDecimal contractPrice,
+            String contractFileUrl,
+            Company company
+    ) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+        if (status != null) this.status = status;
+        if (startDate != null) this.startDate = startDate;
+        if (endDateExpected != null) this.expectedEndDate = endDateExpected;
+        if (endDate != null) this.endDate = endDate;
+        if (contractPrice != null) this.contractPrice = contractPrice;
+        if (contractFileUrl != null) this.contractFileUrl = contractFileUrl;
+        if (company != null) this.company = company;
+    }
 }

@@ -17,10 +17,15 @@ public abstract class BaseEntity {
 
     @CreatedDate
     @Column(updatable = false)
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private LocalDateTime updatedAt;
 
-    private LocalDateTime deletedDate;
+    private LocalDateTime deletedAt;
+
+    // 🔥 Soft delete 메서드 추가
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

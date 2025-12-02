@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @Table(name = "project_members")
@@ -27,4 +29,18 @@ public class ProjectMember extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private ProjectRole role;
+
+    private LocalDateTime deletedAt;
+
+    public static ProjectMember create(Project project, User user, ProjectRole role) {
+        ProjectMember pm = new ProjectMember();
+        pm.project = project;
+        pm.user = user;
+        pm.role = role;
+        return pm;
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

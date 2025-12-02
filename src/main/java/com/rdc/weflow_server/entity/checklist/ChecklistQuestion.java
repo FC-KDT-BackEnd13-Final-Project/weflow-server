@@ -48,4 +48,11 @@ public class ChecklistQuestion extends BaseEntity {
         MULTI,    // 복수 선택
         TEXT      // 주관식 입력
     }
+
+    // 질문 수정
+    public void updateQuestion(String questionText, QuestionType questionType, Integer orderIndex) {
+        if (questionText != null) this.questionText = questionText;
+        if (questionType != null) this.questionType = questionType;
+        if (orderIndex != null) this.orderIndex = orderIndex;
+    }
 }

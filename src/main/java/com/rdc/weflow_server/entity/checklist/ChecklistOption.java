@@ -32,4 +32,11 @@ public class ChecklistOption extends BaseEntity {
     /** 보기 표시 순서 */
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex;
+
+    // 옵션 수정
+    public void updateOption(String optionText, Boolean hasInput, Integer orderIndex) {
+        if (optionText != null) this.optionText = optionText;
+        if (hasInput != null) this.hasInput = hasInput;
+        if (orderIndex != null) this.orderIndex = orderIndex;
+    }
 }

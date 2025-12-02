@@ -18,3 +18,5 @@ cloud:
     access-key: test-access-key
     secret-key: test-secret-key
     region: ap-northeast-2
+    s3:
+      bucket: test-bucket

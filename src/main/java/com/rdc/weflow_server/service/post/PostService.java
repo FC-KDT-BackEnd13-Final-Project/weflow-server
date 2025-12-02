@@ -92,7 +92,7 @@ public class PostService {
                                             .memberId(answer.getUser().getId())
                                             .name(answer.getUser().getName())
                                             .build())
-                                    .respondedAt(answer.getCreatedDate())
+                                    .respondedAt(answer.getCreatedAt())
                                     .build())
                             .orElse(null);
 
@@ -134,7 +134,7 @@ public class PostService {
                 : null;
 
         // 수정 여부
-        boolean isEdited = !post.getCreatedDate().equals(post.getLastModifiedDate());
+        boolean isEdited = !post.getCreatedAt().equals(post.getUpdatedAt());
 
         // Response 생성
         return PostDetailResponse.builder()
@@ -158,8 +158,8 @@ public class PostService {
                 .questions(questions)
                 .parentPost(parentPostDto)
                 .isEdited(isEdited)
-                .createdAt(post.getCreatedDate())
-                .updatedAt(post.getLastModifiedDate())
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
                 .build();
     }
 
@@ -208,7 +208,7 @@ public class PostService {
                             .sum();
 
                     // 수정 여부 (생성일과 수정일이 다르면 수정됨)
-                    boolean isEdited = !post.getCreatedDate().equals(post.getLastModifiedDate());
+                    boolean isEdited = !post.getCreatedAt().equals(post.getUpdatedAt());
 
                     // 작성자 정보
                     String companyName = post.getUser().getCompany() != null
@@ -233,8 +233,8 @@ public class PostService {
                             .commentCount(commentCount)
                             .replyCount(replyCount)
                             .isEdited(isEdited)
-                            .createdAt(post.getCreatedDate())
-                            .updatedAt(post.getLastModifiedDate())
+                            .createdAt(post.getCreatedAt())
+                            .updatedAt(post.getUpdatedAt())
                             .build();
                 })
                 .toList();
@@ -447,8 +447,9 @@ public class PostService {
             throw new BusinessException(ErrorCode.POST_ALREADY_DELETED);
         }
 
-        // Soft Delete: status를 DELETED로 변경
+        // Soft Delete: status를 DELETED로 변경하고 deletedAt 설정
         post.updateStatus(PostApprovalStatus.DELETED);
+        post.softDelete();
     }
 
 }

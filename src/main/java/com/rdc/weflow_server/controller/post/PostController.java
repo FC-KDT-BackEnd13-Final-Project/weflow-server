@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.controller.post;
 
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
+import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
@@ -63,6 +64,18 @@ public class PostController {
             @RequestBody PostUpdateRequest request
     ) {
         PostDetailResponse response = postService.updatePost(projectId, postId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 게시글 삭제 (Soft Delete)
+     */
+    @DeleteMapping("/api/projects/{projectId}/posts/{postId}")
+    public ResponseEntity<PostDeleteResponse> deletePost(
+            @PathVariable Long projectId,
+            @PathVariable Long postId
+    ) {
+        PostDeleteResponse response = postService.deletePost(projectId, postId);
         return ResponseEntity.ok(response);
     }
 

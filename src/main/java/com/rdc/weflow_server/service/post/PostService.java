@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.service.post;
 
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
+import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -325,5 +327,40 @@ public class PostService {
         return getPost(projectId, postId);
     }
 
-    // 게시글 삭제
+    /**
+     * 게시글 삭제 (Soft Delete)
+     */
+    @Transactional
+    public PostDeleteResponse deletePost(Long projectId, Long postId) {
+        // Post 조회 및 검증
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // projectId 검증
+        if (!post.getStep().getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        // 이미 삭제된 게시글인지 확인
+        if (post.getStatus() == PostApprovalStatus.DELETED) {
+            throw new BusinessException(ErrorCode.POST_ALREADY_DELETED);
+        }
+
+        // Soft Delete: status를 DELETED로 변경
+        post.updateStatus(PostApprovalStatus.DELETED);
+
+        // 삭제 시간 (현재 시간)
+        LocalDateTime deletedAt = LocalDateTime.now();
+
+        // 응답 생성
+        return PostDeleteResponse.builder()
+                .success(true)
+                .data(PostDeleteResponse.Data.builder()
+                        .postId(postId)
+                        .deletedAt(deletedAt)
+                        .build())
+                .error(null)
+                .build();
+    }
+
 }

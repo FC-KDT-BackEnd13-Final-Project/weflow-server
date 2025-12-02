@@ -1,7 +1,6 @@
 package com.rdc.weflow_server.entity.attachment;
 
 import com.rdc.weflow_server.entity.BaseEntity;
-import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 

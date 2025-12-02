@@ -9,7 +9,6 @@ import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
-import com.rdc.weflow_server.entity.step.StepCategory;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
@@ -84,12 +83,10 @@ public class StepService {
 
         Integer orderIndex = resolveOrderIndex(projectId, request.getOrderIndex());
         StepStatus status = request.getStatus() != null ? request.getStatus() : StepStatus.PENDING;
-        StepCategory category = request.getCategory() != null ? request.getCategory() : StepCategory.REQUIREMENTS;
         ProjectStatus phase = ProjectStatus.IN_PROGRESS;
 
         Step step = Step.builder()
                 .phase(phase)
-                .category(category)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .orderIndex(orderIndex)
@@ -117,12 +114,12 @@ public class StepService {
         StepStatus status = StepStatus.PENDING;
 
         List<Step> defaults = List.of(
-                buildDefaultStep(project, creator, phase, status, StepCategory.REQUIREMENTS, 1, "요구사항 정의"),
-                buildDefaultStep(project, creator, phase, status, StepCategory.UI_PLANNING, 2, "화면 설계"),
-                buildDefaultStep(project, creator, phase, status, StepCategory.DESIGN, 3, "디자인"),
-                buildDefaultStep(project, creator, phase, status, StepCategory.PUBLISHING, 4, "퍼블리싱"),
-                buildDefaultStep(project, creator, phase, status, StepCategory.DEVELOPMENT, 5, "개발"),
-                buildDefaultStep(project, creator, phase, status, StepCategory.QA, 6, "검수")
+                buildDefaultStep(project, creator, phase, status, 1, "요구사항 정의"),
+                buildDefaultStep(project, creator, phase, status, 2, "화면 설계"),
+                buildDefaultStep(project, creator, phase, status, 3, "디자인"),
+                buildDefaultStep(project, creator, phase, status, 4, "퍼블리싱"),
+                buildDefaultStep(project, creator, phase, status, 5, "개발"),
+                buildDefaultStep(project, creator, phase, status, 6, "검수")
         );
 
         stepRepository.saveAll(defaults);
@@ -156,9 +153,6 @@ public class StepService {
         }
         if (request.getDescription() != null) {
             step.updateDescription(request.getDescription());
-        }
-        if (request.getCategory() != null) {
-            step.updateCategory(request.getCategory());
         }
 
         return toStepResponse(step);
@@ -277,7 +271,6 @@ public class StepService {
         return StepResponse.builder()
                 .id(step.getId())
                 .phase(step.getPhase())
-                .category(step.getCategory())
                 .title(step.getTitle())
                 .description(step.getDescription())
                 .orderIndex(step.getOrderIndex())
@@ -294,13 +287,11 @@ public class StepService {
             User creator,
             ProjectStatus phase,
             StepStatus status,
-            StepCategory category,
             Integer orderIndex,
             String title
     ) {
         return Step.builder()
                 .phase(phase)
-                .category(category)
                 .title(title)
                 .description(null)
                 .orderIndex(orderIndex)

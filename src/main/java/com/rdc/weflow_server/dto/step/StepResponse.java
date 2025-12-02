@@ -1,7 +1,6 @@
 package com.rdc.weflow_server.dto.step;
 
 import com.rdc.weflow_server.entity.project.ProjectStatus;
-import com.rdc.weflow_server.entity.step.StepCategory;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +15,6 @@ public class StepResponse {
 
     private Long id;
     private ProjectStatus phase;
-    private StepCategory category;
     private String title;
     private String description;
     private Integer orderIndex;

@@ -3,7 +3,6 @@ package com.rdc.weflow_server.controller.post;
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostCreateResponse;
-import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
@@ -58,25 +57,25 @@ public class PostController {
      * 게시글 수정
      */
     @PatchMapping("/api/projects/{projectId}/posts/{postId}")
-    public ResponseEntity<PostDetailResponse> updatePost(
+    public ResponseEntity<ApiResponse<PostDetailResponse>> updatePost(
             @PathVariable Long projectId,
             @PathVariable Long postId,
             @RequestBody PostUpdateRequest request
     ) {
         PostDetailResponse response = postService.updatePost(projectId, postId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success("게시글 수정 성공", response));
     }
 
     /**
      * 게시글 삭제 (Soft Delete)
      */
     @DeleteMapping("/api/projects/{projectId}/posts/{postId}")
-    public ResponseEntity<PostDeleteResponse> deletePost(
+    public ResponseEntity<ApiResponse<Void>> deletePost(
             @PathVariable Long projectId,
             @PathVariable Long postId
     ) {
-        PostDeleteResponse response = postService.deletePost(projectId, postId);
-        return ResponseEntity.ok(response);
+        postService.deletePost(projectId, postId);
+        return ResponseEntity.ok(ApiResponse.success("게시글 삭제 성공", null));
     }
 
 }

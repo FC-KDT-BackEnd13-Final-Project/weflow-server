@@ -2,7 +2,6 @@ package com.rdc.weflow_server.service.post;
 
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostCreateResponse;
-import com.rdc.weflow_server.dto.post.PostDeleteResponse;
 import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
@@ -429,7 +428,7 @@ public class PostService {
      * 게시글 삭제 (Soft Delete)
      */
     @Transactional
-    public PostDeleteResponse deletePost(Long projectId, Long postId) {
+    public void deletePost(Long projectId, Long postId) {
         // Post 조회 및 검증
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -446,19 +445,6 @@ public class PostService {
 
         // Soft Delete: status를 DELETED로 변경
         post.updateStatus(PostApprovalStatus.DELETED);
-
-        // 삭제 시간 (현재 시간)
-        LocalDateTime deletedAt = LocalDateTime.now();
-
-        // 응답 생성
-        return PostDeleteResponse.builder()
-                .success(true)
-                .data(PostDeleteResponse.Data.builder()
-                        .postId(postId)
-                        .deletedAt(deletedAt)
-                        .build())
-                .error(null)
-                .build();
     }
 
 }

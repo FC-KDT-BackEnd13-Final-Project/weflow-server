@@ -5,6 +5,7 @@ import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.step.StepRequestCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
+import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
 import com.rdc.weflow_server.service.step.StepRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +52,14 @@ public class StepRequestController {
     public ApiResponse<StepRequestResponse> getRequest(@PathVariable Long requestId) {
         StepRequestResponse response = stepRequestService.getRequest(requestId);
         return ApiResponse.success("stepRequest.get.success", response);
+    }
+
+    @PatchMapping("/requests/{requestId}")
+    public ApiResponse<StepRequestResponse> updateRequest(@PathVariable Long requestId,
+                                                          @AuthenticationPrincipal CustomUserDetails user,
+                                                          @RequestBody @Valid StepRequestUpdateRequest request) {
+        StepRequestResponse response = stepRequestService.updateRequest(requestId, user.getId(), request);
+        return ApiResponse.success("stepRequest.update.success", response);
     }
 
     @DeleteMapping("/requests/{requestId}")

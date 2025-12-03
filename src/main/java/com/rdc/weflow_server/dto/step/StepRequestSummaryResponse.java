@@ -19,4 +19,7 @@ public class StepRequestSummaryResponse {
     private LocalDateTime decidedAt;
     private Long stepId;
     private String stepTitle;
+    private Long requestedBy;
+    private String requestedByName;
+    private boolean hasAttachment;
 }

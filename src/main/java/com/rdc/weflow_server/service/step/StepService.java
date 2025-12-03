@@ -124,7 +124,7 @@ public class StepService {
 
         ProjectStatus phase = request.getPhase() != null ? request.getPhase() : ProjectStatus.IN_PROGRESS;
         Integer orderIndex = resolveOrderIndex(projectId, phase, request.getOrderIndex());
-        StepStatus status = request.getStatus() != null ? request.getStatus() : StepStatus.PENDING;
+        StepStatus status = StepStatus.PENDING;
 
         Step step = Step.builder()
                 .phase(phase)
@@ -178,9 +178,7 @@ public class StepService {
         checkProjectAdminPermission(currentUserId, step.getProject());
 
         StepStatus currentStatus = step.getStatus();
-
-        // 수정 불가 상태
-        if (currentStatus == StepStatus.WAITING_APPROVAL || currentStatus == StepStatus.APPROVED) {
+        if (currentStatus != StepStatus.PENDING) {
             throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
         }
 

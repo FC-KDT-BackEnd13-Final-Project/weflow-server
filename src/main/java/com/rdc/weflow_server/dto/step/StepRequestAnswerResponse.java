@@ -16,5 +16,8 @@ public class StepRequestAnswerResponse {
     private StepRequestAnswerType response;
     private Long requestId;
     private Long respondedBy;
+    private String respondedByName;
+    private String reasonText;
+    private LocalDateTime decidedAt;
     private LocalDateTime createdAt;
 }

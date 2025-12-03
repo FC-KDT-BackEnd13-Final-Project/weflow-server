@@ -7,6 +7,7 @@ import com.rdc.weflow_server.entity.step.StepRequestAnswer;
 import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
+import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
@@ -32,6 +33,7 @@ public class StepRequestAnswerService {
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final StepRequestService stepRequestService;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, Long currentUserId, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -64,6 +66,13 @@ public class StepRequestAnswerService {
             throw new BusinessException(ErrorCode.STEP_REQUEST_ALREADY_DECIDED);
         }
 
+        // 반려/변경 요청 시 사유 필수
+        if ((request.getResponse() == StepRequestAnswerType.REJECT
+                || request.getResponse() == StepRequestAnswerType.CHANGE_REQUEST)
+                && (request.getReasonText() == null || request.getReasonText().isBlank())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
         stepRequestAnswerRepository.findByStepRequest_Id(requestId)
                 .ifPresent(existing -> { throw new BusinessException(ErrorCode.STEP_ANSWER_ALREADY_EXISTS); });
 
@@ -77,6 +86,13 @@ public class StepRequestAnswerService {
 
         stepRequest.updateStatus(newStatus);
         stepRequest.updateDecidedAt(LocalDateTime.now());
+        stepRequest.updateDecidedBy(user);
+
+        if (newStatus == StepRequestStatus.APPROVED) {
+            stepRequest.getStep().updateStatus(StepStatus.APPROVED);
+        } else {
+            stepRequestService.refreshStepStatus(stepRequest.getStep());
+        }
 
         StepRequestAnswer saved = stepRequestAnswerRepository.save(answer);
         // REASON_UPDATE: 반려/승인 사유 afterContent 기록
@@ -101,6 +117,9 @@ public class StepRequestAnswerService {
                 .response(answer.getResponse())
                 .requestId(answer.getStepRequest() != null ? answer.getStepRequest().getId() : null)
                 .respondedBy(answer.getRespondedBy() != null ? answer.getRespondedBy().getId() : null)
+                .respondedByName(answer.getRespondedBy() != null ? answer.getRespondedBy().getName() : null)
+                .reasonText(answer.getReasonText())
+                .decidedAt(answer.getStepRequest() != null ? answer.getStepRequest().getDecidedAt() : null)
                 .createdAt(answer.getCreatedAt())
                 .build();
     }

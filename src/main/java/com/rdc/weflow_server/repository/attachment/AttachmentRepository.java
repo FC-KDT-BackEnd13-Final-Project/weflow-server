@@ -18,10 +18,14 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
             Attachment.AttachmentType attachmentType
     );
 
+    boolean existsByIdAndTargetTypeAndTargetId(Long id, Attachment.TargetType targetType, Long targetId);
+
     // 특정 타입의 첨부파일 삭제
     void deleteByTargetTypeAndTargetIdAndAttachmentType(
             Attachment.TargetType targetType,
             Long targetId,
             Attachment.AttachmentType attachmentType
     );
+
+    void deleteByTargetTypeAndTargetId(Attachment.TargetType targetType, Long targetId);
 }

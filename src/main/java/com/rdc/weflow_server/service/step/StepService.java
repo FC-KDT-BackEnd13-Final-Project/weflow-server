@@ -8,12 +8,19 @@ import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectRole;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.checklist.ChecklistRepository;
+import com.rdc.weflow_server.repository.post.PostRepository;
+import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
+import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,15 +42,32 @@ public class StepService {
     private final StepRepository stepRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final PostRepository postRepository;
+    private final StepRequestRepository stepRequestRepository;
+    private final ChecklistRepository checklistRepository;
 
     private void checkProjectAdminPermission(Long currentUserId, Project project) {
-        // TODO: 현재 사용자가 이 프로젝트의 "개발사 ADMIN"인지 확인
-        // 1) user = userRepository.findById(currentUserId)
-        //    - user.getRole() == UserRole.SYSTEM_ADMIN 이면 바로 허용
-        // 2) member = projectMemberRepository.findByProjectIdAndUserIdAndDeletedAtIsNull(...)
-        //    - member.getCompanyType() == CompanyType.AGENCY
-        //    - member.getRole() == ProjectMemberRole.ADMIN 인 경우만 허용
-        // 3) 그 외에는 ErrorCode.FORBIDDEN 던지기
+        User user = getUserOrThrow(currentUserId);
+
+        // 시스템 관리자는 모든 프로젝트에 대해 허용
+        if (user.getRole() == UserRole.SYSTEM_ADMIN) {
+            return;
+        }
+
+        ProjectMember member = projectMemberRepository
+                .findByProjectIdAndUserId(project.getId(), currentUserId)
+                .orElse(null);
+
+        // 프로젝트 멤버가 아니거나 삭제된 멤버면 거부
+        if (member == null || member.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 개발사 ADMIN인지 확인
+        if (member.getUser().getRole() != UserRole.AGENCY || member.getRole() != ProjectRole.ADMIN) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 
     // 프로젝트 단계 목록 조회
@@ -100,7 +124,7 @@ public class StepService {
 
         ProjectStatus phase = request.getPhase() != null ? request.getPhase() : ProjectStatus.IN_PROGRESS;
         Integer orderIndex = resolveOrderIndex(projectId, phase, request.getOrderIndex());
-        StepStatus status = request.getStatus() != null ? request.getStatus() : StepStatus.PENDING;
+        StepStatus status = StepStatus.PENDING;
 
         Step step = Step.builder()
                 .phase(phase)
@@ -154,9 +178,7 @@ public class StepService {
         checkProjectAdminPermission(currentUserId, step.getProject());
 
         StepStatus currentStatus = step.getStatus();
-
-        // 수정 불가 상태
-        if (currentStatus == StepStatus.WAITING_APPROVAL || currentStatus == StepStatus.APPROVED) {
+        if (currentStatus != StepStatus.PENDING) {
             throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
         }
 
@@ -192,7 +214,14 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
         }
 
-        // TODO: Post, StepRequest, Checklist Repository exists 체크 후 삭제 막기
+        boolean hasPosts = postRepository.existsByStepId(stepId);
+        boolean hasRequests = stepRequestRepository.existsByStep_Id(stepId);
+        boolean hasChecklists = checklistRepository.existsByStep_Id(stepId);
+
+        if (hasPosts || hasRequests || hasChecklists) {
+            throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
+        }
+
         step.softDelete();
     }
 

@@ -13,4 +13,6 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long> {
     Optional<Checklist> findByIdAndIsTemplateTrue(Long templateId); // 템플릿 조회
     List<Checklist> findByStep_Project_IdOrderByCreatedAtDesc(Long projectId); // 프로젝트별 체크리스트 목록 조회
 
+    boolean existsByStep_Id(Long stepId);
+
 }

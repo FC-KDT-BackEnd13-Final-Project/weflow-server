@@ -50,6 +50,11 @@ public class Attachment extends BaseEntity {
     @Column(name = "url", length = 1000)
     private String url;
 
+    public void bindTo(TargetType targetType, Long targetId) {
+        this.targetType = targetType;
+        this.targetId = targetId;
+    }
+
     // --- ENUM 정의 ---
 
     /** 어떤 엔티티에 속하는 첨부인지 */

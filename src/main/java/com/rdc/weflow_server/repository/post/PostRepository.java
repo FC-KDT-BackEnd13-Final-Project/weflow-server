@@ -18,4 +18,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     // 특정 step의 게시글 조회
     List<Post> findByStepId(Long stepId);
+
+    boolean existsByStepId(Long stepId);
 }

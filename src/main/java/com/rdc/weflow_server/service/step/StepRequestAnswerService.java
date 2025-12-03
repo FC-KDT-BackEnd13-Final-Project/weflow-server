@@ -7,9 +7,12 @@ import com.rdc.weflow_server.entity.step.StepRequestAnswer;
 import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
+import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
@@ -29,6 +32,8 @@ public class StepRequestAnswerService {
     private final StepRequestAnswerRepository stepRequestAnswerRepository;
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final StepRequestService stepRequestService;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, Long currentUserId, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -36,17 +41,36 @@ public class StepRequestAnswerService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // TODO: 승인/반려는 "고객사 멤버(MEMBER)"만 가능
-        //  - user.role == CLIENT
-        //  - ProjectMember 존재 여부 확인
-
         // 삭제된 단계에 속한 승인요청은 더 이상 승인/반려 처리할 수 없음
         if (stepRequest.getStep() == null || stepRequest.getStep().getDeletedAt() != null) {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
+        // 승인/반려는 고객사 멤버만 가능 (시스템 관리자는 예외적으로 허용)
+        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
+            if (user.getRole() != UserRole.CLIENT) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+
+            boolean isActiveMember = projectMemberRepository
+                    .findByProjectIdAndUserId(stepRequest.getStep().getProject().getId(), currentUserId)
+                    .filter(pm -> pm.getDeletedAt() == null)
+                    .isPresent();
+
+            if (!isActiveMember) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+        }
+
         if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
             throw new BusinessException(ErrorCode.STEP_REQUEST_ALREADY_DECIDED);
+        }
+
+        // 반려/변경 요청 시 사유 필수
+        if ((request.getResponse() == StepRequestAnswerType.REJECT
+                || request.getResponse() == StepRequestAnswerType.CHANGE_REQUEST)
+                && (request.getReasonText() == null || request.getReasonText().isBlank())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         stepRequestAnswerRepository.findByStepRequest_Id(requestId)
@@ -62,6 +86,13 @@ public class StepRequestAnswerService {
 
         stepRequest.updateStatus(newStatus);
         stepRequest.updateDecidedAt(LocalDateTime.now());
+        stepRequest.updateDecidedBy(user);
+
+        if (newStatus == StepRequestStatus.APPROVED) {
+            stepRequest.getStep().updateStatus(StepStatus.APPROVED);
+        } else {
+            stepRequestService.refreshStepStatus(stepRequest.getStep());
+        }
 
         StepRequestAnswer saved = stepRequestAnswerRepository.save(answer);
         // REASON_UPDATE: 반려/승인 사유 afterContent 기록
@@ -86,6 +117,9 @@ public class StepRequestAnswerService {
                 .response(answer.getResponse())
                 .requestId(answer.getStepRequest() != null ? answer.getStepRequest().getId() : null)
                 .respondedBy(answer.getRespondedBy() != null ? answer.getRespondedBy().getId() : null)
+                .respondedByName(answer.getRespondedBy() != null ? answer.getRespondedBy().getName() : null)
+                .reasonText(answer.getReasonText())
+                .decidedAt(answer.getStepRequest() != null ? answer.getStepRequest().getDecidedAt() : null)
                 .createdAt(answer.getCreatedAt())
                 .build();
     }

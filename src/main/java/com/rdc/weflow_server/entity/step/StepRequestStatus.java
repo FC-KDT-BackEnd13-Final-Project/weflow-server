@@ -6,5 +6,9 @@ public enum StepRequestStatus {
     APPROVED,
     REJECTED,
     CHANGE_REQUESTED,
-    CANCELED
+    CANCELED;
+
+    public boolean isEditable() {
+        return this == REQUESTED;
+    }
 }

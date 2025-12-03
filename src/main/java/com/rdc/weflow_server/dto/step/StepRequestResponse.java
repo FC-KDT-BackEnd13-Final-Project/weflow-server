@@ -1,11 +1,13 @@
 package com.rdc.weflow_server.dto.step;
 
+import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -20,5 +22,11 @@ public class StepRequestResponse {
     private Long stepId;
     private Long projectId;
     private Long requestedBy;
+    private String requestedByName;
+    private Long decidedBy;
+    private String decidedByName;
+    private String decisionReason;
+    private List<AttachmentResponse> files;
+    private List<AttachmentResponse> links;
     private LocalDateTime createdAt;
 }

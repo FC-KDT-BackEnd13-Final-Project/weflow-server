@@ -41,6 +41,10 @@ public class StepRequest extends BaseEntity {
     @JoinColumn(name = "requested_by", nullable = false)
     private User requestedBy;   // 승인 요청자 ID
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "decided_by")
+    private User decidedBy; // 승인/반려 처리자
+
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<StepRequestHistory> histories = new ArrayList<>();
@@ -51,5 +55,17 @@ public class StepRequest extends BaseEntity {
 
     public void updateDecidedAt(LocalDateTime decidedAt) {
         this.decidedAt = decidedAt;
+    }
+
+    public void updateDecidedBy(User decidedBy) {
+        this.decidedBy = decidedBy;
+    }
+
+    public void updateTitle(String title) {
+        this.requestTitle = title;
+    }
+
+    public void updateDescription(String description) {
+        this.requestDescription = description;
     }
 }

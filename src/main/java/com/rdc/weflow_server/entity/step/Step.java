@@ -72,4 +72,8 @@ public class Step extends BaseEntity {
     public void updateOrderIndex(Integer orderIndex) {
         this.orderIndex = orderIndex;
     }
+
+    public void updateStatus(StepStatus status) {
+        this.status = status;
+    }
 }

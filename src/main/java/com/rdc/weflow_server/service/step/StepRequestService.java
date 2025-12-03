@@ -4,13 +4,21 @@ import com.rdc.weflow_server.dto.step.StepRequestCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
+import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
+import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
+import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
+import com.rdc.weflow_server.entity.step.StepRequestHistory.HistoryType;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
+import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
+import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
@@ -30,16 +38,34 @@ public class StepRequestService {
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final StepService stepService;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final AttachmentRepository attachmentRepository;
 
     public StepRequestResponse createRequest(Long stepId, Long currentUserId, StepRequestCreateRequest request) {
-        // TODO: 이 유저가 "개발사 멤버"인지 확인
-        // 1) user.getRole() 이 UserRole.AGENCY (또는 SYSTEM_ADMIN) 인지 확인
-        // 2) projectMemberRepository.findByProjectIdAndUserId(...) 로
-        //    해당 프로젝트의 멤버인지 확인
-        // 3) 아니면 ErrorCode.FORBIDDEN
         Step step = stepService.getStepOrThrow(stepId);
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 시스템 관리자는 예외적으로 허용
+        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
+            // 개발사 소속인지 확인
+            if (user.getRole() != UserRole.AGENCY) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+
+            // 프로젝트 활성 멤버인지 확인 (deletedAt 검사 포함)
+            boolean isActiveMember = projectMemberRepository.findByProjectIdAndUserId(step.getProject().getId(), currentUserId)
+                    .filter(pm -> pm.getDeletedAt() == null)
+                    .isPresent();
+            if (!isActiveMember) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+        }
+
+        // 승인 완료된 단계에는 신규 요청 생성 불가
+        if (step.getStatus() == StepStatus.APPROVED) {
+            throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
+        }
 
         StepRequest stepRequest = StepRequest.builder()
                 .requestTitle(request.getTitle())
@@ -50,6 +76,13 @@ public class StepRequestService {
                 .build();
 
         StepRequest saved = stepRequestRepository.save(stepRequest);
+        attachFiles(saved, request.getAttachmentIds());
+        attachLinks(saved, request.getLinks());
+
+        // 단계 상태를 승인 대기로 변경 (기존이 아니면)
+        if (step.getStatus() != StepStatus.WAITING_APPROVAL) {
+            step.updateStatus(StepStatus.WAITING_APPROVAL);
+        }
         // REQUEST_UPDATE: 제목/설명 초기값 기록(before=null, after=요청 내용 요약)
         saveHistory(stepRequest, StepRequestHistory.HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request), user);
         return toResponse(saved);
@@ -62,11 +95,62 @@ public class StepRequestService {
         return toResponse(stepRequest);
     }
 
+    // 승인 요청 수정 (요청자만, 승인 전 상태만)
+    public StepRequestResponse updateRequest(Long requestId, Long currentUserId, StepRequestUpdateRequest request) {
+        StepRequest stepRequest = stepRequestRepository.findById(requestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Step step = stepRequest.getStep();
+        if (step == null || step.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
+        }
+
+        if (!stepRequest.getStatus().isEditable()) {
+            throw new BusinessException(ErrorCode.STEP_REQUEST_ALREADY_DECIDED);
+        }
+
+        boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
+        boolean isRequester = stepRequest.getRequestedBy() != null
+                && stepRequest.getRequestedBy().getId().equals(currentUserId);
+
+        if (!isSystemAdmin && !isRequester) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 제목/설명 업데이트
+        if (request.getTitle() != null) {
+            if (request.getTitle().isBlank()) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            stepRequest.updateTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            stepRequest.updateDescription(request.getDescription());
+        }
+
+        // 파일 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
+        if (request.getAttachmentIds() != null) {
+            replaceFiles(stepRequest, request.getAttachmentIds());
+        }
+
+        // 링크 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
+        if (request.getLinks() != null) {
+            replaceLinks(stepRequest, request.getLinks());
+        }
+
+        // 수정 이력 기록
+        saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request.getTitle(), request.getDescription()), user);
+
+        return toResponse(stepRequest);
+    }
+
     @Transactional(readOnly = true)
     public StepRequestListResponse getRequestsByStep(Long stepId) {
         // 삭제된 Step이면 조회도 404 처리
         stepService.getStepOrThrow(stepId);
-        List<StepRequest> requests = stepRequestRepository.findByStep_Id(stepId);
+        List<StepRequest> requests = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId);
         List<StepRequestSummaryResponse> summaries = requests.stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
@@ -82,7 +166,7 @@ public class StepRequestService {
     @Transactional(readOnly = true)
     public StepRequestListResponse getRequestsByProject(Long projectId) {
         // 정책: 삭제된 Step에 속한 Request도 프로젝트 히스토리로 조회 가능
-        List<StepRequest> requests = stepRequestRepository.findByStep_Project_Id(projectId);
+        List<StepRequest> requests = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId);
         List<StepRequestSummaryResponse> summaries = requests.stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
@@ -95,14 +179,26 @@ public class StepRequestService {
                 .build();
     }
 
-    // 현재 정책: REQUESTED 상태에서만 취소 가능, 상태를 CANCELED로 전이하며 히스토리에 남김
+    // 현재 정책: WAITING_APPROVAL 상태에서만 취소 가능, 상태를 CANCELED로 전이하며 히스토리에 남김
     public void cancelRequest(Long requestId, Long currentUserId) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // TODO: 요청자 본인 or 개발사 ADMIN만 취소 가능하도록 권한 체크 추가 예정
+        Step step = stepRequest.getStep();
+        if (step == null || step.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
+        }
+
+        boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
+        boolean isRequester = stepRequest.getRequestedBy() != null
+                && stepRequest.getRequestedBy().getId().equals(currentUserId);
+
+        // 요청자 본인만 취소 가능 (시스템관리자는 예외 허용)
+        if (!isSystemAdmin && !isRequester) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
 
         if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
             throw new BusinessException(ErrorCode.STEP_REQUEST_CANNOT_CANCEL);
@@ -112,6 +208,70 @@ public class StepRequestService {
         stepRequest.updateStatus(StepRequestStatus.CANCELED);
         // REQUEST_UPDATE: 상태 전이 기록
         saveHistory(stepRequest, StepRequestHistory.HistoryType.REQUEST_UPDATE, "status", beforeStatus.name(), StepRequestStatus.CANCELED.name(), user);
+        refreshStepStatus(step);
+    }
+
+    private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds) {
+        if (attachmentIds == null || attachmentIds.isEmpty()) {
+            return;
+        }
+
+        List<Attachment> attachments = attachmentRepository.findAllById(attachmentIds);
+        if (attachments.size() != attachmentIds.size()) {
+            throw new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND);
+        }
+
+        for (Attachment attachment : attachments) {
+            if (attachment.getTargetType() != Attachment.TargetType.STEP_REQUEST) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            if (attachment.getTargetId() != null && !attachment.getTargetId().equals(stepRequest.getId())) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            attachment.bindTo(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
+        }
+    }
+
+    private void attachLinks(StepRequest stepRequest, List<String> links) {
+        if (links == null) {
+            return;
+        }
+        if (links.isEmpty()) {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.LINK
+            );
+            return;
+        }
+
+        for (String link : links) {
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST)
+                    .targetId(stepRequest.getId())
+                    .attachmentType(Attachment.AttachmentType.LINK)
+                    .url(link)
+                    .build();
+            attachmentRepository.save(attachment);
+        }
+    }
+
+    private void replaceFiles(StepRequest stepRequest, List<Long> incomingIds) {
+        List<Attachment> existing = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId())
+                .stream()
+                .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.FILE)
+                .collect(Collectors.toList());
+
+        // 제거 대상: 기존 파일 중 incomingIds에 없는 것들
+        existing.stream()
+                .filter(a -> !incomingIds.contains(a.getId()))
+                .forEach(attachmentRepository::delete);
+
+        attachFiles(stepRequest, incomingIds);
+    }
+
+    private void replaceLinks(StepRequest stepRequest, List<String> links) {
+        attachLinks(stepRequest, links);
     }
 
     private StepRequestResponse toResponse(StepRequest stepRequest) {
@@ -125,11 +285,22 @@ public class StepRequestService {
                 .projectId(stepRequest.getStep() != null && stepRequest.getStep().getProject() != null
                         ? stepRequest.getStep().getProject().getId() : null)
                 .requestedBy(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getId() : null)
+                .requestedByName(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getName() : null)
+                .decidedBy(stepRequest.getDecidedBy() != null ? stepRequest.getDecidedBy().getId() : null)
+                .decidedByName(stepRequest.getDecidedBy() != null ? stepRequest.getDecidedBy().getName() : null)
+                .decisionReason(stepRequest.getHistories().stream()
+                        .filter(h -> h.getHistoryType() == HistoryType.REASON_UPDATE)
+                        .reduce((first, second) -> second)
+                        .map(StepRequestHistory::getAfterContent)
+                        .orElse(null))
+                .files(getAttachments(stepRequest, Attachment.AttachmentType.FILE))
+                .links(getAttachments(stepRequest, Attachment.AttachmentType.LINK))
                 .createdAt(stepRequest.getCreatedAt())
                 .build();
     }
 
     private StepRequestSummaryResponse toSummary(StepRequest stepRequest) {
+        boolean hasAttachment = hasAttachment(stepRequest);
         return StepRequestSummaryResponse.builder()
                 .id(stepRequest.getId())
                 .title(stepRequest.getRequestTitle())
@@ -138,7 +309,38 @@ public class StepRequestService {
                 .decidedAt(stepRequest.getDecidedAt())
                 .stepId(stepRequest.getStep() != null ? stepRequest.getStep().getId() : null)
                 .stepTitle(stepRequest.getStep() != null ? stepRequest.getStep().getTitle() : null)
+                .requestedBy(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getId() : null)
+                .requestedByName(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getName() : null)
+                .hasAttachment(hasAttachment)
                 .build();
+    }
+
+    private List<AttachmentResponse> getAttachments(StepRequest stepRequest, Attachment.AttachmentType type) {
+        List<Attachment> attachments = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
+        return attachments.stream()
+                .filter(a -> a.getAttachmentType() == type)
+                .map(AttachmentResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    private boolean hasAttachment(StepRequest stepRequest) {
+        if (stepRequest == null || stepRequest.getId() == null) {
+            return false;
+        }
+        int fileCount = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST,
+                stepRequest.getId(),
+                Attachment.AttachmentType.FILE
+        );
+        if (fileCount > 0) {
+            return true;
+        }
+        int linkCount = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST,
+                stepRequest.getId(),
+                Attachment.AttachmentType.LINK
+        );
+        return linkCount > 0;
     }
 
     private void saveHistory(StepRequest stepRequest, StepRequestHistory.HistoryType type, String fieldName, String beforeContent, String afterContent, User updatedBy) {
@@ -153,8 +355,29 @@ public class StepRequestService {
         stepRequestHistoryRepository.save(history);
     }
 
+    public void refreshStepStatus(Step step) {
+        if (step == null) {
+            return;
+        }
+
+        if (step.getStatus() == StepStatus.APPROVED) {
+            return;
+        }
+
+        boolean hasRequested = stepRequestRepository.existsByStep_IdAndStatus(step.getId(), StepRequestStatus.REQUESTED);
+        if (hasRequested) {
+            step.updateStatus(StepStatus.WAITING_APPROVAL);
+        } else {
+            step.updateStatus(StepStatus.PENDING);
+        }
+    }
+
     private String toRequestContent(StepRequestCreateRequest request) {
         // 단순 문자열 직렬화 (추후 JSON 포맷 필요 시 교체)
         return String.format("title=%s;description=%s", request.getTitle(), request.getDescription());
+    }
+
+    private String toRequestContent(String title, String description) {
+        return String.format("title=%s;description=%s", title, description);
     }
 }

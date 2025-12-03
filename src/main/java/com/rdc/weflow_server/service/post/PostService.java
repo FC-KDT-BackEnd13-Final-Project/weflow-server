@@ -7,6 +7,7 @@ import com.rdc.weflow_server.dto.post.PostDetailResponse;
 import com.rdc.weflow_server.dto.post.PostListResponse;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
 import com.rdc.weflow_server.entity.attachment.Attachment;
+import com.rdc.weflow_server.entity.comment.Comment;
 import com.rdc.weflow_server.entity.post.Post;
 import com.rdc.weflow_server.entity.post.PostApprovalStatus;
 import com.rdc.weflow_server.entity.post.PostOpenStatus;
@@ -17,6 +18,7 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
+import com.rdc.weflow_server.repository.comment.CommentRepository;
 import com.rdc.weflow_server.repository.post.PostAnswerRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
@@ -37,6 +39,7 @@ public class PostService {
     private final PostQuestionRepository postQuestionRepository;
     private final PostAnswerRepository postAnswerRepository;
     private final StepRepository stepRepository;
+    private final CommentRepository commentRepository;
 
     /**
      * 게시글 상세 조회
@@ -459,6 +462,10 @@ public class PostService {
         if (post.getStatus() == PostApprovalStatus.DELETED) {
             throw new BusinessException(ErrorCode.POST_ALREADY_DELETED);
         }
+
+        // 게시글의 모든 댓글도 함께 Soft Delete
+        List<Comment> comments = commentRepository.findAllByPostId(postId);
+        comments.forEach(Comment::softDelete);
 
         // Soft Delete: status를 DELETED로 변경하고 deletedAt 설정
         post.updateStatus(PostApprovalStatus.DELETED);

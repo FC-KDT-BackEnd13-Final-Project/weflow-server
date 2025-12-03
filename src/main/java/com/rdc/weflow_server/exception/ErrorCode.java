@@ -38,6 +38,7 @@ public enum ErrorCode {
 
     // Comment
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_001", "댓글을 찾을 수 없습니다."),
+    COMMENT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "COMMENT_002", "이미 삭제된 댓글입니다."),
 
     // Step
     STEP_NOT_FOUND(HttpStatus.NOT_FOUND, "STEP_001", "단계를 찾을 수 없습니다."),

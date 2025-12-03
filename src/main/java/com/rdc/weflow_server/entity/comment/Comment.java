@@ -6,11 +6,13 @@ import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,5 +42,10 @@ public class Comment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;  // 작성자 ID
+
+    // 업데이트 메서드
+    public void updateContent(String content) {
+        this.content = content;
+    }
 
 }

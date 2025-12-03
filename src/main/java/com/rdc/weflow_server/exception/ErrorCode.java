@@ -91,7 +91,10 @@ public enum ErrorCode {
 
     // Checklist Answer
     REQUIRED_ANSWER_INPUT(HttpStatus.BAD_REQUEST, "CHECKLIST_ANSWER_001", "해당 선택지는 추가 입력이 필요합니다."),
-    INVALID_ANSWER_INPUT(HttpStatus.BAD_REQUEST, "CHECKLIST_ANSWER_002", "해당 선택지에는 추가 입력을 허용하지 않습니다.");
+    INVALID_ANSWER_INPUT(HttpStatus.BAD_REQUEST, "CHECKLIST_ANSWER_002", "해당 선택지에는 추가 입력을 허용하지 않습니다."),
+
+    // Attachment
+    ATTACHMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ATTACHMENT_001", "첨부파일을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

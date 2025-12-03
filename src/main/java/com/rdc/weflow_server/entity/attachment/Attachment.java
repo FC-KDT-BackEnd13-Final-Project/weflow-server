@@ -22,7 +22,7 @@ public class Attachment extends BaseEntity {
     private TargetType targetType;
 
     /** 첨부 주체 ID (post_id, comment_id, step_request_id 등) */
-    @Column(name = "target_id", nullable = false)
+    @Column(name = "target_id")
     private Long targetId;
 
     /** 첨부 구분: FILE / LINK */

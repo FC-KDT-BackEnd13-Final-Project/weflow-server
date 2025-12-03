@@ -1,9 +1,9 @@
-package com.rdc.weflow_server.controller;
+package com.rdc.weflow_server.controller.company;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
-import com.rdc.weflow_server.dto.request.CreateCompanyRequest;
-import com.rdc.weflow_server.dto.response.CompanyResponse;
-import com.rdc.weflow_server.service.CompanyService;
+import com.rdc.weflow_server.dto.company.request.CreateCompanyRequest;
+import com.rdc.weflow_server.dto.company.response.CompanyResponse;
+import com.rdc.weflow_server.service.company.CompanyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

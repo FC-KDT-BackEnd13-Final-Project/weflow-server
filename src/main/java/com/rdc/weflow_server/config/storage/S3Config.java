@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.config;
+package com.rdc.weflow_server.config.storage;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

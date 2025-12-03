@@ -1,9 +1,9 @@
-package com.rdc.weflow_server.controller;
+package com.rdc.weflow_server.controller.auth;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
-import com.rdc.weflow_server.dto.request.LoginRequest;
-import com.rdc.weflow_server.dto.response.LoginResponse;
-import com.rdc.weflow_server.service.AuthService;
+import com.rdc.weflow_server.dto.auth.request.LoginRequest;
+import com.rdc.weflow_server.dto.auth.response.LoginResponse;
+import com.rdc.weflow_server.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

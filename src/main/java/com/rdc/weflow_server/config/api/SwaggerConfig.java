@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.config;
+package com.rdc.weflow_server.config.api;
 
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.OpenAPI;

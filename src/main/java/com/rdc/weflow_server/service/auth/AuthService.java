@@ -1,8 +1,8 @@
-package com.rdc.weflow_server.service;
+package com.rdc.weflow_server.service.auth;
 
 import com.rdc.weflow_server.common.auth.JwtTokenProvider;
-import com.rdc.weflow_server.dto.request.LoginRequest;
-import com.rdc.weflow_server.dto.response.LoginResponse;
+import com.rdc.weflow_server.dto.auth.request.LoginRequest;
+import com.rdc.weflow_server.dto.auth.response.LoginResponse;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserStatus;
 import com.rdc.weflow_server.exception.BusinessException;

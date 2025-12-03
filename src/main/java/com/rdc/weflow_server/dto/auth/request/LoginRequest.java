@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.request;
+package com.rdc.weflow_server.dto.auth.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

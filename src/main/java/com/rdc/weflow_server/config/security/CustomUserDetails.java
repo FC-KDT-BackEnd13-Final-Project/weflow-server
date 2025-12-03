@@ -68,4 +68,8 @@ public class CustomUserDetails implements UserDetails {
     public UserRole getRole() {
         return user.getRole();
     }
+
+    public Long getCompanyId() {
+        return user.getCompany() != null ? user.getCompany().getId() : null;
+    }
 }

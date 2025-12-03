@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.response;
+package com.rdc.weflow_server.dto.user.response;
 
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;

@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.config;
+package com.rdc.weflow_server.config.security;
 
 import com.rdc.weflow_server.common.auth.JwtAuthenticationFilter;
 import com.rdc.weflow_server.common.auth.JwtTokenProvider;

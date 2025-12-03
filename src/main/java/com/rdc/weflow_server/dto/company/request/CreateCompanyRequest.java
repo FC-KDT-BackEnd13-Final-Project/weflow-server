@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.request;
+package com.rdc.weflow_server.dto.company.request;
 
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.company.CompanyStatus;

@@ -1,7 +1,7 @@
-package com.rdc.weflow_server.service;
+package com.rdc.weflow_server.service.company;
 
-import com.rdc.weflow_server.dto.request.CreateCompanyRequest;
-import com.rdc.weflow_server.dto.response.CompanyResponse;
+import com.rdc.weflow_server.dto.company.request.CreateCompanyRequest;
+import com.rdc.weflow_server.dto.company.response.CompanyResponse;
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
@@ -12,15 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
 
     /**
-     * 회사 생성
-     * - 사업자번호 중복 체크
-     * - 이메일 중복 체크
-     * - 회사 저장 후 Response DTO 반환
+     * 관리자 - 회사 생성
+     * POST /api/admin/companies
      */
     @Transactional
     public CompanyResponse createCompany(CreateCompanyRequest request) {
@@ -42,5 +41,21 @@ public class CompanyService {
 
         // 4. Entity -> Response DTO 변환하여 반환
         return CompanyResponse.from(savedCompany);
+    }
+
+    /**
+     * 내 회사 정보 조회
+     * GET /api/companies/me
+     */
+    public CompanyResponse getMyCompany(Long companyId) {
+        // 소속 회사가 없는 경우
+        if (companyId == null) {
+            throw new BusinessException(ErrorCode.COMPANY_NOT_FOUND);
+        }
+
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
+
+        return CompanyResponse.from(company);
     }
 }

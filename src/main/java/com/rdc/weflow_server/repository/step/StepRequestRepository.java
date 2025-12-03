@@ -13,4 +13,6 @@ public interface StepRequestRepository extends JpaRepository<StepRequest, Long> 
 
     @EntityGraph(attributePaths = {"step", "requestedBy"})
     List<StepRequest> findByStep_Project_Id(Long projectId);
+
+    boolean existsByStep_Id(Long stepId);
 }

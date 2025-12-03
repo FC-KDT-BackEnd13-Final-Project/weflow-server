@@ -9,8 +9,10 @@ import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
@@ -30,16 +32,28 @@ public class StepRequestService {
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final StepService stepService;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public StepRequestResponse createRequest(Long stepId, Long currentUserId, StepRequestCreateRequest request) {
-        // TODO: 이 유저가 "개발사 멤버"인지 확인
-        // 1) user.getRole() 이 UserRole.AGENCY (또는 SYSTEM_ADMIN) 인지 확인
-        // 2) projectMemberRepository.findByProjectIdAndUserId(...) 로
-        //    해당 프로젝트의 멤버인지 확인
-        // 3) 아니면 ErrorCode.FORBIDDEN
         Step step = stepService.getStepOrThrow(stepId);
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 시스템 관리자는 예외적으로 허용
+        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
+            // 개발사 소속인지 확인
+            if (user.getRole() != UserRole.AGENCY) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+
+            // 프로젝트 활성 멤버인지 확인 (deletedAt 검사 포함)
+            boolean isActiveMember = projectMemberRepository.findByProjectIdAndUserId(step.getProject().getId(), currentUserId)
+                    .filter(pm -> pm.getDeletedAt() == null)
+                    .isPresent();
+            if (!isActiveMember) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+        }
 
         StepRequest stepRequest = StepRequest.builder()
                 .requestTitle(request.getTitle())
@@ -102,7 +116,25 @@ public class StepRequestService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // TODO: 요청자 본인 or 개발사 ADMIN만 취소 가능하도록 권한 체크 추가 예정
+        Step step = stepRequest.getStep();
+        if (step == null || step.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
+        }
+
+        boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
+        boolean isRequester = stepRequest.getRequestedBy() != null
+                && stepRequest.getRequestedBy().getId().equals(currentUserId);
+
+        boolean isDeveloperAdmin = projectMemberRepository
+                .findByProjectIdAndUserId(step.getProject().getId(), currentUserId)
+                .filter(pm -> pm.getDeletedAt() == null)
+                .filter(pm -> pm.getUser().getRole() == UserRole.AGENCY)
+                .filter(pm -> pm.getRole() == com.rdc.weflow_server.entity.project.ProjectRole.ADMIN)
+                .isPresent();
+
+        if (!isSystemAdmin && !isRequester && !isDeveloperAdmin) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
 
         if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
             throw new BusinessException(ErrorCode.STEP_REQUEST_CANNOT_CANCEL);

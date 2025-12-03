@@ -8,8 +8,10 @@ import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
@@ -29,6 +31,7 @@ public class StepRequestAnswerService {
     private final StepRequestAnswerRepository stepRequestAnswerRepository;
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, Long currentUserId, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -36,13 +39,25 @@ public class StepRequestAnswerService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // TODO: 승인/반려는 "고객사 멤버(MEMBER)"만 가능
-        //  - user.role == CLIENT
-        //  - ProjectMember 존재 여부 확인
-
         // 삭제된 단계에 속한 승인요청은 더 이상 승인/반려 처리할 수 없음
         if (stepRequest.getStep() == null || stepRequest.getStep().getDeletedAt() != null) {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
+        }
+
+        // 승인/반려는 고객사 멤버만 가능 (시스템 관리자는 예외적으로 허용)
+        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
+            if (user.getRole() != UserRole.CLIENT) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+
+            boolean isActiveMember = projectMemberRepository
+                    .findByProjectIdAndUserId(stepRequest.getStep().getProject().getId(), currentUserId)
+                    .filter(pm -> pm.getDeletedAt() == null)
+                    .isPresent();
+
+            if (!isActiveMember) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
         }
 
         if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {

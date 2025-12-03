@@ -7,6 +7,7 @@ import com.rdc.weflow_server.dto.step.StepListResponse;
 import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.step.StepService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,8 +40,11 @@ public class AdminStepController {
     }
 
     @GetMapping("/projects/{projectId}/steps")
-    public ApiResponse<StepListResponse> getSteps(@PathVariable Long projectId) {
-        StepListResponse response = stepService.getStepsByProject(projectId);
+    public ApiResponse<StepListResponse> getSteps(@PathVariable Long projectId,
+                                                  @RequestParam(name = "phase", required = false) ProjectStatus phase) {
+        StepListResponse response = (phase != null)
+                ? stepService.getStepsByProject(projectId, phase)
+                : stepService.getStepsByProject(projectId);
         return ApiResponse.success("step.list.success", response);
     }
 

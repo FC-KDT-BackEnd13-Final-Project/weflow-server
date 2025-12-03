@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.repository.step;
 
 import com.rdc.weflow_server.entity.step.Step;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,8 +18,11 @@ public interface StepRepository extends JpaRepository<Step, Long> {
     @EntityGraph(attributePaths = {"project", "createdBy"})
     List<Step> findByProject_IdAndDeletedAtIsNullOrderByOrderIndexAsc(Long projectId);
 
-    @Query("select max(s.orderIndex) from Step s where s.project.id = :projectId and s.deletedAt is null")
-    Integer findMaxOrderIndexByProjectId(Long projectId);
+    @EntityGraph(attributePaths = {"project", "createdBy"})
+    List<Step> findByProject_IdAndPhaseAndDeletedAtIsNullOrderByOrderIndexAsc(Long projectId, ProjectStatus phase);
+
+    @Query("select max(s.orderIndex) from Step s where s.project.id = :projectId and s.phase = :phase and s.deletedAt is null")
+    Integer findMaxOrderIndexByProjectIdAndPhase(Long projectId, ProjectStatus phase);
 
     List<Step> findByProject_IdAndIdInAndDeletedAtIsNull(Long projectId, Collection<Long> stepIds);
 
@@ -26,7 +30,7 @@ public interface StepRepository extends JpaRepository<Step, Long> {
 
     boolean existsByProject_IdAndTitleIgnoreCaseAndIdNotAndDeletedAtIsNull(Long projectId, String title, Long id);
 
-    boolean existsByProject_IdAndOrderIndexAndDeletedAtIsNull(Long projectId, Integer orderIndex);
+    boolean existsByProject_IdAndPhaseAndOrderIndexAndDeletedAtIsNull(Long projectId, ProjectStatus phase, Integer orderIndex);
 
     Optional<Step> findByIdAndDeletedAtIsNull(Long id);
 }

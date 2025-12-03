@@ -63,6 +63,23 @@ public class StepService {
                 .build();
     }
 
+    // 프로젝트 단계 목록 조회 (phase 필터)
+    @Transactional(readOnly = true)
+    public StepListResponse getStepsByProject(Long projectId, ProjectStatus phase) {
+        List<Step> steps = stepRepository.findByProject_IdAndPhaseAndDeletedAtIsNullOrderByOrderIndexAsc(projectId, phase);
+
+        List<StepResponse> stepResponses = steps.stream()
+                .map(this::toStepResponse)
+                .collect(Collectors.toList());
+
+        return StepListResponse.builder()
+                .totalCount((long) steps.size())
+                .page(0)
+                .size(stepResponses.size())
+                .steps(stepResponses)
+                .build();
+    }
+
     // 단일 단계 조회
     @Transactional(readOnly = true)
     public StepResponse getStep(Long stepId) {
@@ -81,9 +98,9 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_ALREADY_EXISTS);
         }
 
-        Integer orderIndex = resolveOrderIndex(projectId, request.getOrderIndex());
+        ProjectStatus phase = request.getPhase() != null ? request.getPhase() : ProjectStatus.IN_PROGRESS;
+        Integer orderIndex = resolveOrderIndex(projectId, phase, request.getOrderIndex());
         StepStatus status = request.getStatus() != null ? request.getStatus() : StepStatus.PENDING;
-        ProjectStatus phase = ProjectStatus.IN_PROGRESS;
 
         Step step = Step.builder()
                 .phase(phase)
@@ -182,6 +199,7 @@ public class StepService {
     /*
      단계 순서 변경 (개발사 관리자)
      - PENDING 상태인 단계만 순서 변경 허용
+     - 동일 phase 내에서만 순서 변경 가능
      */
     public void reorderSteps(Long projectID, Long currentUserId, StepReorderRequest request) {
         User user = getUserOrThrow(currentUserId);
@@ -208,6 +226,14 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
+        // phase가 섞여 있으면 순서 변경 불가
+        Set<ProjectStatus> phases = steps.stream()
+                .map(Step::getPhase)
+                .collect(Collectors.toSet());
+        if (phases.size() > 1) {
+            throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+        }
+
         for (Step step : steps) {
             Integer newOrder = orderMap.get(step.getId());
 
@@ -224,12 +250,12 @@ public class StepService {
         }
     }
 
-    private Integer resolveOrderIndex(Long projectId, Integer requestedOrderIndex) {
+    private Integer resolveOrderIndex(Long projectId, ProjectStatus phase, Integer requestedOrderIndex) {
         if (requestedOrderIndex == null || requestedOrderIndex < 1) {
-            Integer maxOrder = stepRepository.findMaxOrderIndexByProjectId(projectId);
+            Integer maxOrder = stepRepository.findMaxOrderIndexByProjectIdAndPhase(projectId, phase);
             return (maxOrder == null ? 1 : maxOrder + 1);
         }
-        if (stepRepository.existsByProject_IdAndOrderIndexAndDeletedAtIsNull(projectId, requestedOrderIndex)) {
+        if (stepRepository.existsByProject_IdAndPhaseAndOrderIndexAndDeletedAtIsNull(projectId, phase, requestedOrderIndex)) {
             throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
         }
         return requestedOrderIndex;

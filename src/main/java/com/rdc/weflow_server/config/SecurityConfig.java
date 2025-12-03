@@ -45,6 +45,15 @@ public class SecurityConfig {
                         // 2. 관리자만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("SYSTEM_ADMIN")
 
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs",
+                                "/swagger-resources/**",
+                                "/swagger-ui.html",
+                                "/error"
+                        ).permitAll()
+
                         // 3. 나머지는 로그인 필요
                         .anyRequest().authenticated()
                 )

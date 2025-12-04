@@ -5,6 +5,9 @@ import com.rdc.weflow_server.dto.post.*;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.post.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +35,16 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostListResponse>> getPosts(
             @PathVariable Long projectId,
             @RequestParam(required = false) ProjectStatus projectStatus,
-            @RequestParam(required = false) Long stepId
+            @RequestParam(required = false) Long stepId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction
     ) {
-        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId);
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId, pageable);
         return ResponseEntity.ok(ApiResponse.success("게시글 목록 조회 성공", response));
     }
 

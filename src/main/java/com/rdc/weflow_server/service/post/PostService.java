@@ -18,6 +18,8 @@ import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -161,20 +163,20 @@ public class PostService {
      * 게시글 list 조회
      * TODO: 나중에 동적 쿼리 (Querydsl 등으로 refactoring 할 필요 있음)
      */
-    public PostListResponse getPosts(Long projectId, ProjectStatus projectStatus, Long stepId) {
-        List<Post> posts;
+    public PostListResponse getPosts(Long projectId, ProjectStatus projectStatus, Long stepId, Pageable pageable) {
+        Page<Post> postPage;
 
         // 필터에 따라 게시글 조회
         if (stepId != null) {
-            posts = postRepository.findByStepId(stepId);
+            postPage = postRepository.findByStepId(stepId, pageable);
         } else if (projectStatus != null) {
-            posts = postRepository.findByStepProjectIdAndStepProjectStatus(projectId, projectStatus);
+            postPage = postRepository.findByStepProjectIdAndStepProjectStatus(projectId, projectStatus, pageable);
         } else {
-            posts = postRepository.findByStepProjectId(projectId);
+            postPage = postRepository.findByStepProjectId(projectId, pageable);
         }
 
         // PostListResponse로 변환
-        List<PostListResponse.PostItem> postItems = posts.stream()
+        List<PostListResponse.PostItem> postItems = postPage.getContent().stream()
                 .map(post -> {
                     // 파일 존재 여부
                     boolean hasFiles = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
@@ -233,8 +235,19 @@ public class PostService {
                 })
                 .toList();
 
+        // 페이지네이션 정보 생성
+        PostListResponse.PageInfo pageInfo = PostListResponse.PageInfo.builder()
+                .currentPage(postPage.getNumber())
+                .pageSize(postPage.getSize())
+                .totalElements(postPage.getTotalElements())
+                .totalPages(postPage.getTotalPages())
+                .hasNext(postPage.hasNext())
+                .hasPrevious(postPage.hasPrevious())
+                .build();
+
         return PostListResponse.builder()
                 .posts(postItems)
+                .pageInfo(pageInfo)
                 .build();
     }
 

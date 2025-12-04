@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -50,6 +51,7 @@ public class PostController {
      * 게시글 작성
      */
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PostCreateResponse> createPost(
             @PathVariable Long projectId,
             @RequestBody PostCreateRequest request
@@ -87,6 +89,7 @@ public class PostController {
      * 질문에 대한 답변 등록
      */
     @PostMapping("/{postId}/questions/{questionId}/answer")
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PostAnswerResponse> answerQuestion(
             @PathVariable Long projectId,
             @PathVariable Long postId,

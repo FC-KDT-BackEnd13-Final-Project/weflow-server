@@ -17,6 +17,10 @@ import com.rdc.weflow_server.repository.post.PostAnswerRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +40,7 @@ public class PostService {
     private final PostAnswerRepository postAnswerRepository;
     private final StepRepository stepRepository;
     private final CommentRepository commentRepository;
+    private final ActivityLogService activityLogService;
 
     /**
      * 게시글 상세 조회
@@ -255,7 +260,7 @@ public class PostService {
      * 게시글 작성
      */
     @Transactional
-    public PostCreateResponse createPost(Long projectId, PostCreateRequest request) {
+    public PostCreateResponse createPost(Long projectId, PostCreateRequest request, HttpServletRequest httpRequest) {
         // Step 조회 및 검증
         Step step = stepRepository.findById(request.getStepId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_NOT_FOUND));
@@ -338,6 +343,16 @@ public class PostService {
             }
         }
 
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.POST,
+                post.getId(),
+                user.getId(),
+                projectId,
+                httpRequest.getRemoteAddr()
+        );
+
         // 생성된 게시글 ID 반환
         return PostCreateResponse.builder()
                 .postId(post.getId())
@@ -348,7 +363,7 @@ public class PostService {
      * 게시글 수정
      */
     @Transactional
-    public PostDetailResponse updatePost(Long projectId, Long postId, PostUpdateRequest request) {
+    public PostDetailResponse updatePost(Long projectId, Long postId, PostUpdateRequest request, HttpServletRequest httpRequest) {
         // Post 조회 및 검증
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -464,6 +479,16 @@ public class PostService {
             post.updateStatus(newStatus);
         }
 
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.POST,
+                postId,
+                userDetails.getId(),
+                projectId,
+                httpRequest.getRemoteAddr()
+        );
+
         // 수정된 게시글 상세 정보 반환
         return getPost(projectId, postId);
     }
@@ -472,7 +497,7 @@ public class PostService {
      * 게시글 삭제 (Soft Delete)
      */
     @Transactional
-    public void deletePost(Long projectId, Long postId) {
+    public void deletePost(Long projectId, Long postId, HttpServletRequest httpRequest) {
         // Post 조회 및 검증
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -502,6 +527,16 @@ public class PostService {
         // Soft Delete: status를 DELETED로 변경하고 deletedAt 설정
         post.updateStatus(PostApprovalStatus.DELETED);
         post.softDelete();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.POST,
+                postId,
+                userDetails.getId(),
+                projectId,
+                httpRequest.getRemoteAddr()
+        );
     }
 
     /**

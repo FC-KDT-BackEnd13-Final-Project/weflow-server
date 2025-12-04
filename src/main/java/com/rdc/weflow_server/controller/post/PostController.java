@@ -4,6 +4,7 @@ import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.post.*;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.post.PostService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -54,9 +55,10 @@ public class PostController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PostCreateResponse> createPost(
             @PathVariable Long projectId,
-            @RequestBody PostCreateRequest request
+            @RequestBody PostCreateRequest request,
+            HttpServletRequest httpRequest
     ) {
-        PostCreateResponse response = postService.createPost(projectId, request);
+        PostCreateResponse response = postService.createPost(projectId, request, httpRequest);
         return ApiResponse.success("게시글 작성 성공", response);
     }
 
@@ -67,9 +69,10 @@ public class PostController {
     public ApiResponse<PostDetailResponse> updatePost(
             @PathVariable Long projectId,
             @PathVariable Long postId,
-            @RequestBody PostUpdateRequest request
+            @RequestBody PostUpdateRequest request,
+            HttpServletRequest httpRequest
     ) {
-        PostDetailResponse response = postService.updatePost(projectId, postId, request);
+        PostDetailResponse response = postService.updatePost(projectId, postId, request, httpRequest);
         return ApiResponse.success("게시글 수정 성공", response);
     }
 
@@ -79,9 +82,10 @@ public class PostController {
     @DeleteMapping("/{postId}")
     public ApiResponse<Void> deletePost(
             @PathVariable Long projectId,
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            HttpServletRequest httpRequest
     ) {
-        postService.deletePost(projectId, postId);
+        postService.deletePost(projectId, postId, httpRequest);
         return ApiResponse.success("게시글 삭제 성공", null);
     }
 

@@ -11,6 +11,10 @@ import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.comment.CommentRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +33,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final ActivityLogService activityLogService;
 
     /**
      * 댓글 목록 조회 (대댓글 미리보기 포함)
@@ -84,7 +89,7 @@ public class CommentService {
      * 댓글 작성
      */
     @Transactional
-    public CommentCreateResponse createComment(Long postId, CommentCreateRequest request) {
+    public CommentCreateResponse createComment(Long postId, CommentCreateRequest request, HttpServletRequest httpRequest) {
         // Post 조회
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
@@ -104,6 +109,16 @@ public class CommentService {
                 .build();
 
         comment = commentRepository.save(comment);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.COMMENT,
+                comment.getId(),
+                user.getId(),
+                post.getStep().getProject().getId(),
+                httpRequest.getRemoteAddr()
+        );
 
         return CommentCreateResponse.builder()
                 .commentId(comment.getId())
@@ -156,7 +171,7 @@ public class CommentService {
      * 대댓글 작성
      */
     @Transactional
-    public CommentCreateResponse createReply(Long commentId, CommentCreateRequest request) {
+    public CommentCreateResponse createReply(Long commentId, CommentCreateRequest request, HttpServletRequest httpRequest) {
         // 부모 댓글 조회
         Comment parentComment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
@@ -177,6 +192,16 @@ public class CommentService {
 
         reply = commentRepository.save(reply);
 
+        // 로그 기록 (대댓글도 COMMENT 테이블에 저장되므로 TargetTable은 COMMENT)
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.COMMENT,
+                reply.getId(),
+                user.getId(),
+                parentComment.getPost().getStep().getProject().getId(),
+                httpRequest.getRemoteAddr()
+        );
+
         return CommentCreateResponse.builder()
                 .commentId(reply.getId())
                 .build();
@@ -186,7 +211,7 @@ public class CommentService {
      * 댓글 삭제 (Soft Delete)
      */
     @Transactional
-    public void deleteComment(Long commentId) {
+    public void deleteComment(Long commentId, HttpServletRequest httpRequest) {
         // 댓글 조회
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
@@ -204,6 +229,16 @@ public class CommentService {
 
         // Soft Delete
         comment.softDelete();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.COMMENT,
+                commentId,
+                currentUser.getId(),
+                comment.getPost().getStep().getProject().getId(),
+                httpRequest.getRemoteAddr()
+        );
     }
 
     /**

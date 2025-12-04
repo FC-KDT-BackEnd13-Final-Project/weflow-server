@@ -6,6 +6,7 @@ import com.rdc.weflow_server.dto.comment.CommentCreateResponse;
 import com.rdc.weflow_server.dto.comment.CommentListResponse;
 import com.rdc.weflow_server.dto.comment.ReplyListResponse;
 import com.rdc.weflow_server.service.comment.CommentService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +33,10 @@ public class CommentController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentCreateResponse> createComment(
             @PathVariable Long postId,
-            @RequestBody CommentCreateRequest request
+            @RequestBody CommentCreateRequest request,
+            HttpServletRequest httpRequest
     ) {
-        CommentCreateResponse response = commentService.createComment(postId, request);
+        CommentCreateResponse response = commentService.createComment(postId, request, httpRequest);
         return ApiResponse.success("댓글 작성 성공", response);
     }
 
@@ -58,9 +60,10 @@ public class CommentController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentCreateResponse> createReply(
             @PathVariable Long commentId,
-            @RequestBody CommentCreateRequest request
+            @RequestBody CommentCreateRequest request,
+            HttpServletRequest httpRequest
     ) {
-        CommentCreateResponse response = commentService.createReply(commentId, request);
+        CommentCreateResponse response = commentService.createReply(commentId, request, httpRequest);
         return ApiResponse.success("대댓글 작성 성공", response);
     }
 
@@ -68,8 +71,8 @@ public class CommentController {
      * 댓글 삭제
      */
     @DeleteMapping("/api/comments/{commentId}")
-    public ApiResponse<Void> deleteComment(@PathVariable Long commentId) {
-        commentService.deleteComment(commentId);
+    public ApiResponse<Void> deleteComment(@PathVariable Long commentId, HttpServletRequest httpRequest) {
+        commentService.deleteComment(commentId, httpRequest);
         return ApiResponse.success("댓글 삭제 성공", null);
     }
 

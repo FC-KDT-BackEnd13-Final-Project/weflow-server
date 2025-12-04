@@ -13,7 +13,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
-import static com.rdc.weflow_server.entity.user.QUser.user; // QUser static import
+import static com.rdc.weflow_server.entity.user.QUser.user;
 
 @RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepositoryCustom {

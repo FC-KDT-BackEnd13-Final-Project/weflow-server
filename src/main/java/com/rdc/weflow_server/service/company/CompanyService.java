@@ -98,7 +98,7 @@ public class CompanyService {
 
         // 2. 이미 삭제된 회사인지 체크
         if (company.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.COMPANY_NOT_FOUND);
+            throw new BusinessException(ErrorCode.COMPANY_ALREADY_DELETED);
         }
 
         // 3. 엔티티의 수정 메서드 호출

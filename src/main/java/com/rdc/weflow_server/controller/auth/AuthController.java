@@ -6,7 +6,6 @@ import com.rdc.weflow_server.dto.auth.response.LoginResponse;
 import com.rdc.weflow_server.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,8 +23,8 @@ public class AuthController {
      * POST /api/auth/login
      */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("로그인에 성공했습니다.", response));
+        return ApiResponse.success("로그인에 성공했습니다.", response);
     }
 }

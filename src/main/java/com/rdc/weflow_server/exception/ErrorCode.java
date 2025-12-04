@@ -17,6 +17,14 @@ public enum ErrorCode {
     // Post
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_001", "게시글을 찾을 수 없습니다."),
     POST_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "POST_002", "이미 삭제된 게시글입니다."),
+    POST_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "POST_003", "이미 완료된 게시글입니다."),
+    INVALID_POST_STATUS(HttpStatus.BAD_REQUEST, "POST_004", "게시글 상태가 올바르지 않습니다."),
+
+    // Post Question
+    QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "QUESTION_001", "질문을 찾을 수 없습니다."),
+
+    // Post Answer
+    ANSWER_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ANSWER_001", "이미 답변이 등록되었습니다."),
 
     // Company
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_001", "회사를 찾을 수 없습니다."),

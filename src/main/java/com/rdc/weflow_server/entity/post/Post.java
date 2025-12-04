@@ -32,7 +32,7 @@ public class Post extends BaseEntity {
     private ProjectStatus projectStatus; // 게시글이 어떤 phase에 속해있는지 계약-진행-납품-유지보수
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false) // TODO: DELETED 없애도 될 것 같아요. 나중에 확인 @Jaehee
     private PostApprovalStatus status; // NORMAL, WAITING_CONFIRM, CONFIRMED, REJECTED, DELETED
 
     @Enumerated(EnumType.STRING)
@@ -66,6 +66,10 @@ public class Post extends BaseEntity {
 
     public void updateStatus(PostApprovalStatus status) {
         this.status = status;
+    }
+
+    public void closePost() {
+        this.openStatus = PostOpenStatus.CLOSED;
     }
 
 }

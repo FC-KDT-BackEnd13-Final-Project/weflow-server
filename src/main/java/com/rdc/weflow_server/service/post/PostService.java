@@ -1,20 +1,14 @@
 package com.rdc.weflow_server.service.post;
 
 import com.rdc.weflow_server.config.security.CustomUserDetails;
-import com.rdc.weflow_server.dto.post.PostCreateRequest;
-import com.rdc.weflow_server.dto.post.PostCreateResponse;
-import com.rdc.weflow_server.dto.post.PostDetailResponse;
-import com.rdc.weflow_server.dto.post.PostListResponse;
-import com.rdc.weflow_server.dto.post.PostUpdateRequest;
+import com.rdc.weflow_server.dto.post.*;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.comment.Comment;
-import com.rdc.weflow_server.entity.post.Post;
-import com.rdc.weflow_server.entity.post.PostApprovalStatus;
-import com.rdc.weflow_server.entity.post.PostOpenStatus;
-import com.rdc.weflow_server.entity.post.PostQuestion;
+import com.rdc.weflow_server.entity.post.*;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
@@ -470,6 +464,147 @@ public class PostService {
         // Soft Delete: status를 DELETED로 변경하고 deletedAt 설정
         post.updateStatus(PostApprovalStatus.DELETED);
         post.softDelete();
+    }
+
+    /**
+     * 질문에 답변하기
+     */
+    @Transactional
+    public PostAnswerResponse answerQuestion(Long projectId, Long postId, Long questionId, PostAnswerRequest request) {
+        // 질문 조회
+        PostQuestion question = postQuestionRepository.findById(questionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+
+        // 질문이 해당 게시글에 속하는지 검증
+        if (!question.getPost().getId().equals(postId)) {
+            throw new BusinessException(ErrorCode.QUESTION_NOT_FOUND);
+        }
+
+        // 게시글 조회
+        Post post = question.getPost();
+
+        // projectId 검증
+        if (!post.getStep().getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        // 현재 사용자 조회
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        User currentUser = userDetails.getUser();
+
+        // 권한 검증: 작성자의 반대편 역할만 답변 가능
+        User postAuthor = post.getUser();
+        UserRole authorRole = postAuthor.getRole();
+        UserRole currentRole = currentUser.getRole();
+
+        // SYSTEM_ADMIN은 모든 질문에 답변 가능
+        if (currentRole != UserRole.SYSTEM_ADMIN) {
+            // CLIENT가 쓴 글 -> AGENCY만 답변 가능
+            // AGENCY가 쓴 글 -> CLIENT만 답변 가능
+            if (authorRole == UserRole.CLIENT && currentRole != UserRole.AGENCY) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+            if (authorRole == UserRole.AGENCY && currentRole != UserRole.CLIENT) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+        }
+
+        // 이미 답변이 있는지 확인
+        if (postAnswerRepository.findByQuestionId(questionId).isPresent()) {
+            throw new BusinessException(ErrorCode.ANSWER_ALREADY_EXISTS);
+        }
+
+        // 답변 생성
+        PostAnswer answer = PostAnswer.builder()
+                .answerType(request.getAnswerType())
+                .content(request.getContent())
+                .question(question)
+                .user(currentUser)
+                .build();
+        postAnswerRepository.save(answer);
+
+        // Response 생성
+        return PostAnswerResponse.builder()
+                .answerId(answer.getId())
+                .answerType(answer.getAnswerType())
+                .content(answer.getContent())
+                .respondent(PostAnswerResponse.RespondentDto.builder()
+                        .memberId(currentUser.getId())
+                        .name(currentUser.getName())
+                        .role(currentUser.getRole().name())
+                        .build())
+                .createdAt(answer.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * 게시글 상태 변경 (CONFIRMED / REJECTED)
+     */
+    @Transactional
+    public void updatePostStatus(Long projectId, Long postId, PostStatusUpdateRequest request) {
+        // 게시글 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // projectId 검증
+        if (!post.getStep().getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        // 작성자 권한 검증
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        if (!post.getUser().getId().equals(userDetails.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // WAITING_CONFIRM 상태일 때만 변경 가능
+        if (post.getStatus() != PostApprovalStatus.WAITING_CONFIRM) {
+            throw new BusinessException(ErrorCode.INVALID_POST_STATUS);
+        }
+
+        // CONFIRMED 또는 REJECTED만 허용
+        PostApprovalStatus newStatus = request.getStatus();
+        if (newStatus != PostApprovalStatus.CONFIRMED && newStatus != PostApprovalStatus.REJECTED) {
+            throw new BusinessException(ErrorCode.INVALID_POST_STATUS);
+        }
+
+        // 상태 변경
+        post.updateStatus(newStatus);
+    }
+
+    /**
+     * 게시글 완료 (OPEN -> CLOSED)
+     */
+    @Transactional
+    public void closePost(Long projectId, Long postId) {
+        // 게시글 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        // projectId 검증
+        if (!post.getStep().getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        // 작성자 권한 검증
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        if (!post.getUser().getId().equals(userDetails.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 이미 CLOSED 상태인지 확인
+        if (post.getOpenStatus() == PostOpenStatus.CLOSED) {
+            throw new BusinessException(ErrorCode.POST_ALREADY_CLOSED);
+        }
+
+        // CLOSED 상태로 변경
+        post.closePost();
     }
 
 }

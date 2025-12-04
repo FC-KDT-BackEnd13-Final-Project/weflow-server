@@ -7,6 +7,8 @@ import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
 import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
 import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
@@ -22,6 +24,8 @@ import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.log.AuditContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +44,11 @@ public class StepRequestService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final AttachmentRepository attachmentRepository;
+    private final ActivityLogService activityLogService;
 
-    public StepRequestResponse createRequest(Long stepId, Long currentUserId, StepRequestCreateRequest request) {
+    public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
-        User user = userRepository.findById(currentUserId)
+        User user = userRepository.findById(ctx.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 시스템 관리자는 예외적으로 허용
@@ -54,7 +59,7 @@ public class StepRequestService {
             }
 
             // 프로젝트 활성 멤버인지 확인 (deletedAt 검사 포함)
-            boolean isActiveMember = projectMemberRepository.findByProjectIdAndUserId(step.getProject().getId(), currentUserId)
+            boolean isActiveMember = projectMemberRepository.findByProjectIdAndUserId(step.getProject().getId(), ctx.userId())
                     .filter(pm -> pm.getDeletedAt() == null)
                     .isPresent();
             if (!isActiveMember) {
@@ -76,8 +81,8 @@ public class StepRequestService {
                 .build();
 
         StepRequest saved = stepRequestRepository.save(stepRequest);
-        attachFiles(saved, request.getAttachmentIds());
-        attachLinks(saved, request.getLinks());
+        attachFiles(saved, request.getAttachmentIds(), ctx);
+        attachLinks(saved, request.getLinks(), ctx);
 
         // 단계 상태를 승인 대기로 변경 (기존이 아니면)
         if (step.getStatus() != StepStatus.WAITING_APPROVAL) {
@@ -85,6 +90,14 @@ public class StepRequestService {
         }
         // REQUEST_UPDATE: 제목/설명 초기값 기록(before=null, after=요청 내용 요약)
         saveHistory(stepRequest, StepRequestHistory.HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request), user);
+        activityLogService.createLog(
+                ActionType.SUBMIT,
+                TargetTable.STEP_REQUEST,
+                saved.getId(),
+                ctx.userId(),
+                step.getProject().getId(),
+                ctx.ipAddress()
+        );
         return toResponse(saved);
     }
 
@@ -96,10 +109,10 @@ public class StepRequestService {
     }
 
     // 승인 요청 수정 (요청자만, 승인 전 상태만)
-    public StepRequestResponse updateRequest(Long requestId, Long currentUserId, StepRequestUpdateRequest request) {
+    public StepRequestResponse updateRequest(Long requestId, AuditContext ctx, StepRequestUpdateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
-        User user = userRepository.findById(currentUserId)
+        User user = userRepository.findById(ctx.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Step step = stepRequest.getStep();
@@ -113,7 +126,7 @@ public class StepRequestService {
 
         boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
         boolean isRequester = stepRequest.getRequestedBy() != null
-                && stepRequest.getRequestedBy().getId().equals(currentUserId);
+                && stepRequest.getRequestedBy().getId().equals(ctx.userId());
 
         if (!isSystemAdmin && !isRequester) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
@@ -132,17 +145,25 @@ public class StepRequestService {
 
         // 파일 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
         if (request.getAttachmentIds() != null) {
-            replaceFiles(stepRequest, request.getAttachmentIds());
+            replaceFiles(stepRequest, request.getAttachmentIds(), ctx);
         }
 
         // 링크 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
         if (request.getLinks() != null) {
-            replaceLinks(stepRequest, request.getLinks());
+            replaceLinks(stepRequest, request.getLinks(), ctx);
         }
 
         // 수정 이력 기록
         saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request.getTitle(), request.getDescription()), user);
 
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.STEP_REQUEST,
+                stepRequest.getId(),
+                ctx.userId(),
+                step.getProject().getId(),
+                ctx.ipAddress()
+        );
         return toResponse(stepRequest);
     }
 
@@ -180,10 +201,10 @@ public class StepRequestService {
     }
 
     // 현재 정책: WAITING_APPROVAL 상태에서만 취소 가능, 상태를 CANCELED로 전이하며 히스토리에 남김
-    public void cancelRequest(Long requestId, Long currentUserId) {
+    public void cancelRequest(Long requestId, AuditContext ctx) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
-        User user = userRepository.findById(currentUserId)
+        User user = userRepository.findById(ctx.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Step step = stepRequest.getStep();
@@ -193,7 +214,7 @@ public class StepRequestService {
 
         boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
         boolean isRequester = stepRequest.getRequestedBy() != null
-                && stepRequest.getRequestedBy().getId().equals(currentUserId);
+                && stepRequest.getRequestedBy().getId().equals(ctx.userId());
 
         // 요청자 본인만 취소 가능 (시스템관리자는 예외 허용)
         if (!isSystemAdmin && !isRequester) {
@@ -209,9 +230,17 @@ public class StepRequestService {
         // REQUEST_UPDATE: 상태 전이 기록
         saveHistory(stepRequest, StepRequestHistory.HistoryType.REQUEST_UPDATE, "status", beforeStatus.name(), StepRequestStatus.CANCELED.name(), user);
         refreshStepStatus(step);
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.STEP_REQUEST,
+                stepRequest.getId(),
+                ctx.userId(),
+                step.getProject().getId(),
+                ctx.ipAddress()
+        );
     }
 
-    private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds) {
+    private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds, AuditContext ctx) {
         if (attachmentIds == null || attachmentIds.isEmpty()) {
             return;
         }
@@ -229,19 +258,49 @@ public class StepRequestService {
                 throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
             }
             attachment.bindTo(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
+            activityLogService.createLog(
+                    ActionType.UPLOAD,
+                    TargetTable.ATTACHMENT,
+                    attachment.getId(),
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
+            );
         }
     }
 
-    private void attachLinks(StepRequest stepRequest, List<String> links) {
+    private void attachLinks(StepRequest stepRequest, List<String> links, AuditContext ctx) {
         if (links == null) {
             return;
         }
         if (links.isEmpty()) {
-            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
-                    Attachment.TargetType.STEP_REQUEST,
+        List<Attachment> existingLinks = attachmentRepository.findByTargetTypeAndTargetId(
+                        Attachment.TargetType.STEP_REQUEST,
+                        stepRequest.getId())
+                .stream()
+                .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.LINK)
+                .toList();
+        if (!existingLinks.isEmpty()) {
+            attachmentRepository.deleteAll(existingLinks);
+            for (Attachment link : existingLinks) {
+                activityLogService.createLog(
+                        ActionType.REMOVE,
+                        TargetTable.ATTACHMENT,
+                        link.getId(),
+                        ctx.userId(),
+                        stepRequest.getStep().getProject().getId(),
+                        ctx.ipAddress()
+                );
+            }
+            activityLogService.createLog(
+                    ActionType.REMOVE,
+                    TargetTable.STEP_REQUEST,
                     stepRequest.getId(),
-                    Attachment.AttachmentType.LINK
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
             );
+        }
             return;
         }
 
@@ -253,10 +312,18 @@ public class StepRequestService {
                     .url(link)
                     .build();
             attachmentRepository.save(attachment);
+            activityLogService.createLog(
+                    ActionType.UPLOAD,
+                    TargetTable.ATTACHMENT,
+                    attachment.getId(),
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
+            );
         }
     }
 
-    private void replaceFiles(StepRequest stepRequest, List<Long> incomingIds) {
+    private void replaceFiles(StepRequest stepRequest, List<Long> incomingIds, AuditContext ctx) {
         List<Attachment> existing = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId())
                 .stream()
                 .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.FILE)
@@ -265,13 +332,23 @@ public class StepRequestService {
         // 제거 대상: 기존 파일 중 incomingIds에 없는 것들
         existing.stream()
                 .filter(a -> !incomingIds.contains(a.getId()))
-                .forEach(attachmentRepository::delete);
+                .forEach(a -> {
+                    attachmentRepository.delete(a);
+                    activityLogService.createLog(
+                            ActionType.REMOVE,
+                            TargetTable.ATTACHMENT,
+                            a.getId(),
+                            ctx.userId(),
+                            stepRequest.getStep().getProject().getId(),
+                            ctx.ipAddress()
+                    );
+                });
 
-        attachFiles(stepRequest, incomingIds);
+        attachFiles(stepRequest, incomingIds, ctx);
     }
 
-    private void replaceLinks(StepRequest stepRequest, List<String> links) {
-        attachLinks(stepRequest, links);
+    private void replaceLinks(StepRequest stepRequest, List<String> links, AuditContext ctx) {
+        attachLinks(stepRequest, links, ctx);
     }
 
     private StepRequestResponse toResponse(StepRequest stepRequest) {

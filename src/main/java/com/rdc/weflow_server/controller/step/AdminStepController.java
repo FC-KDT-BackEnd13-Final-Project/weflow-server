@@ -8,6 +8,7 @@ import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.step.StepService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequiredArgsConstructor
 @Validated
@@ -34,8 +37,10 @@ public class AdminStepController {
     @PostMapping("/projects/{projectId}/steps")
     public ApiResponse<StepResponse> createStep(@PathVariable Long projectId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
-                                                @RequestBody @Valid StepCreateRequest request) {
-        StepResponse response = stepService.createStep(projectId, user.getId(), request);
+                                                @RequestBody @Valid StepCreateRequest request,
+                                                HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), projectId);
+        StepResponse response = stepService.createStep(projectId, request, ctx);
         return ApiResponse.success("step.create.success", response);
     }
 
@@ -57,22 +62,28 @@ public class AdminStepController {
     @PatchMapping("/steps/{stepId}")
     public ApiResponse<StepResponse> updateStep(@PathVariable Long stepId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
-                                                @RequestBody @Valid StepUpdateRequest request) {
-        StepResponse response = stepService.updateStep(stepId, user.getId(), request);
+                                                @RequestBody @Valid StepUpdateRequest request,
+                                                HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), null);
+        StepResponse response = stepService.updateStep(stepId, request, ctx);
         return ApiResponse.success("step.update.success", response);
     }
 
     @DeleteMapping("/steps/{stepId}")
     public ApiResponse<Void> deleteStep(@PathVariable Long stepId,
-                                        @AuthenticationPrincipal CustomUserDetails user) {
-        stepService.deleteStep(stepId, user.getId());
+                                        @AuthenticationPrincipal CustomUserDetails user,
+                                        HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), null);
+        stepService.deleteStep(stepId, ctx);
         return ApiResponse.success("step.delete.success", null);
     }
 
     @PatchMapping("/steps/reorder")
     public ApiResponse<Void> reorderSteps(@AuthenticationPrincipal CustomUserDetails user,
-                                          @RequestBody @Valid StepReorderRequest request) {
-        stepService.reorderSteps(request.getProjectId(), user.getId(), request);
+                                          @RequestBody @Valid StepReorderRequest request,
+                                          HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), request.getProjectId());
+        stepService.reorderSteps(request.getProjectId(), request, ctx);
         return ApiResponse.success("step.reorder.success", null);
     }
 }

@@ -6,7 +6,9 @@ import com.rdc.weflow_server.dto.step.StepRequestCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
+import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.step.StepRequestService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,8 +33,10 @@ public class StepRequestController {
     @PostMapping("/steps/{stepId}/requests")
     public ApiResponse<StepRequestResponse> createRequest(@PathVariable Long stepId,
                                                           @AuthenticationPrincipal CustomUserDetails user,
-                                                          @RequestBody @Valid StepRequestCreateRequest request) {
-        StepRequestResponse response = stepRequestService.createRequest(stepId, user.getId(), request);
+                                                          @RequestBody @Valid StepRequestCreateRequest request,
+                                                          HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), null);
+        StepRequestResponse response = stepRequestService.createRequest(stepId, ctx, request);
         return ApiResponse.success("stepRequest.create.success", response);
     }
 
@@ -57,15 +61,19 @@ public class StepRequestController {
     @PatchMapping("/requests/{requestId}")
     public ApiResponse<StepRequestResponse> updateRequest(@PathVariable Long requestId,
                                                           @AuthenticationPrincipal CustomUserDetails user,
-                                                          @RequestBody @Valid StepRequestUpdateRequest request) {
-        StepRequestResponse response = stepRequestService.updateRequest(requestId, user.getId(), request);
+                                                          @RequestBody @Valid StepRequestUpdateRequest request,
+                                                          HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), null);
+        StepRequestResponse response = stepRequestService.updateRequest(requestId, ctx, request);
         return ApiResponse.success("stepRequest.update.success", response);
     }
 
     @DeleteMapping("/requests/{requestId}")
     public ApiResponse<Void> cancelRequest(@PathVariable Long requestId,
-                                           @AuthenticationPrincipal CustomUserDetails user) {
-        stepRequestService.cancelRequest(requestId, user.getId());
+                                           @AuthenticationPrincipal CustomUserDetails user,
+                                           HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), null);
+        stepRequestService.cancelRequest(requestId, ctx);
         return ApiResponse.success("stepRequest.cancel.success", null);
     }
 }

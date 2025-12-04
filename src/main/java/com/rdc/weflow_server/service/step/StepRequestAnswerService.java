@@ -2,6 +2,8 @@ package com.rdc.weflow_server.service.step;
 
 import com.rdc.weflow_server.dto.step.StepRequestAnswerCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestAnswerResponse;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestAnswer;
 import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
@@ -17,6 +19,8 @@ import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.log.AuditContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,11 +38,12 @@ public class StepRequestAnswerService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final StepRequestService stepRequestService;
+    private final ActivityLogService activityLogService;
 
-    public StepRequestAnswerResponse answerRequest(Long requestId, Long currentUserId, StepRequestAnswerCreateRequest request) {
+    public StepRequestAnswerResponse answerRequest(Long requestId, AuditContext ctx, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STEP_REQUEST_NOT_FOUND));
-        User user = userRepository.findById(currentUserId)
+        User user = userRepository.findById(ctx.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 삭제된 단계에 속한 승인요청은 더 이상 승인/반려 처리할 수 없음
@@ -53,7 +58,7 @@ public class StepRequestAnswerService {
             }
 
             boolean isActiveMember = projectMemberRepository
-                    .findByProjectIdAndUserId(stepRequest.getStep().getProject().getId(), currentUserId)
+                    .findByProjectIdAndUserId(stepRequest.getStep().getProject().getId(), ctx.userId())
                     .filter(pm -> pm.getDeletedAt() == null)
                     .isPresent();
 
@@ -97,6 +102,14 @@ public class StepRequestAnswerService {
         StepRequestAnswer saved = stepRequestAnswerRepository.save(answer);
         // REASON_UPDATE: 반려/승인 사유 afterContent 기록
         saveReasonHistory(stepRequest, request.getReasonText(), user);
+        activityLogService.createLog(
+                mapAnswerToAction(request.getResponse()),
+                TargetTable.STEP_RESPONSE,
+                stepRequest.getId(),
+                ctx.userId(),
+                stepRequest.getStep().getProject().getId(),
+                ctx.ipAddress()
+        );
         return toResponse(saved);
     }
 
@@ -132,6 +145,17 @@ public class StepRequestAnswerService {
             case APPROVE -> StepRequestStatus.APPROVED;
             case REJECT -> StepRequestStatus.REJECTED;
             case CHANGE_REQUEST -> StepRequestStatus.CHANGE_REQUESTED;
+        };
+    }
+
+    private ActionType mapAnswerToAction(StepRequestAnswerType response) {
+        if (response == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        return switch (response) {
+            case APPROVE -> ActionType.APPROVE;
+            case REJECT -> ActionType.REJECT;
+            case CHANGE_REQUEST -> ActionType.UPDATE;
         };
     }
 

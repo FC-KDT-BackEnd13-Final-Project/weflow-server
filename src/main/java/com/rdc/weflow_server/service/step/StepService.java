@@ -6,16 +6,20 @@ import com.rdc.weflow_server.dto.step.StepOrderItem;
 import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.project.Project;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.project.ProjectRole;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.service.log.AuditContext;
+import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.repository.checklist.ChecklistRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
@@ -46,6 +50,7 @@ public class StepService {
     private final PostRepository postRepository;
     private final StepRequestRepository stepRequestRepository;
     private final ChecklistRepository checklistRepository;
+    private final ActivityLogService activityLogService;
 
     private void checkProjectAdminPermission(Long currentUserId, Project project) {
         User user = getUserOrThrow(currentUserId);
@@ -112,11 +117,11 @@ public class StepService {
     }
 
     // 단계 생성 (개발사 관리자)
-    public StepResponse createStep(Long projectId, Long currentUserId, StepCreateRequest request) {
+    public StepResponse createStep(Long projectId, StepCreateRequest request, AuditContext ctx) {
         Project project = getProjectOrThrow(projectId);
-        User user = getUserOrThrow(currentUserId);
+        User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(currentUserId, project);
+        checkProjectAdminPermission(ctx.userId(), project);
 
         if (stepRepository.existsByProject_IdAndTitleIgnoreCaseAndDeletedAtIsNull(projectId, request.getTitle())) {
             throw new BusinessException(ErrorCode.STEP_ALREADY_EXISTS);
@@ -137,6 +142,14 @@ public class StepService {
                 .build();
 
         Step saved = stepRepository.save(step);
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.STEP,
+                saved.getId(),
+                ctx.userId(),
+                project.getId(),
+                ctx.ipAddress()
+        );
         return toStepResponse(saved);
     }
 
@@ -171,11 +184,11 @@ public class StepService {
     - IN_PROGRESS: 삭제/순서 변경 막고, 이름/설명 수정 허용 (상위 카테고리/프로젝트 상태는 수정 불가)
     - WAITING_APPROVAL, APPROVED: 수정 불가
      */
-    public StepResponse updateStep(Long stepId, Long currentUserId, StepUpdateRequest request) {
+    public StepResponse updateStep(Long stepId, StepUpdateRequest request, AuditContext ctx) {
         Step step = getStepOrThrow(stepId);
-        User user = getUserOrThrow(currentUserId);
+        User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(currentUserId, step.getProject());
+        checkProjectAdminPermission(ctx.userId(), step.getProject());
 
         StepStatus currentStatus = step.getStatus();
         if (currentStatus != StepStatus.PENDING) {
@@ -194,6 +207,14 @@ public class StepService {
             step.updateDescription(request.getDescription());
         }
 
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.STEP,
+                step.getId(),
+                ctx.userId(),
+                step.getProject().getId(),
+                ctx.ipAddress()
+        );
         return toStepResponse(step);
     }
 
@@ -203,11 +224,11 @@ public class StepService {
      - 게시글/승인요청/체크리스트 연동 시 연결 데이터 있으면 삭제 금지 정책 추가 예정
      - 현재 구현: 하드 삭제 대신 deletedAt 값으로 soft delete 처리
      */
-    public void deleteStep(Long stepId, Long currentUserId) {
+    public void deleteStep(Long stepId, AuditContext ctx) {
         Step step = getStepOrThrow(stepId);
-        User user = getUserOrThrow(currentUserId);
+        User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(currentUserId, step.getProject());
+        checkProjectAdminPermission(ctx.userId(), step.getProject());
 
         StepStatus status = step.getStatus();
         if (status != StepStatus.PENDING) {
@@ -223,6 +244,14 @@ public class StepService {
         }
 
         step.softDelete();
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.STEP,
+                step.getId(),
+                ctx.userId(),
+                step.getProject().getId(),
+                ctx.ipAddress()
+        );
     }
 
     /*
@@ -230,11 +259,11 @@ public class StepService {
      - PENDING 상태인 단계만 순서 변경 허용
      - 동일 phase 내에서만 순서 변경 가능
      */
-    public void reorderSteps(Long projectID, Long currentUserId, StepReorderRequest request) {
-        User user = getUserOrThrow(currentUserId);
+    public void reorderSteps(Long projectID, StepReorderRequest request, AuditContext ctx) {
+        User user = getUserOrThrow(ctx.userId());
         Project project = getProjectOrThrow(projectID);
 
-        checkProjectAdminPermission(currentUserId, project);
+        checkProjectAdminPermission(ctx.userId(), project);
 
         List<StepOrderItem> orderItems = request.getSteps();
         if (orderItems == null || orderItems.isEmpty()) {
@@ -277,6 +306,15 @@ public class StepService {
 
             step.updateOrderIndex(newOrder);
         }
+
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.STEP,
+                null,
+                ctx.userId(),
+                project.getId(),
+                ctx.ipAddress()
+        );
     }
 
     private Integer resolveOrderIndex(Long projectId, ProjectStatus phase, Integer requestedOrderIndex) {

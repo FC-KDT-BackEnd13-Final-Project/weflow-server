@@ -1,14 +1,13 @@
 package com.rdc.weflow_server.controller.post;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
-import com.rdc.weflow_server.dto.post.PostCreateRequest;
-import com.rdc.weflow_server.dto.post.PostCreateResponse;
-import com.rdc.weflow_server.dto.post.PostDetailResponse;
-import com.rdc.weflow_server.dto.post.PostListResponse;
-import com.rdc.weflow_server.dto.post.PostUpdateRequest;
+import com.rdc.weflow_server.dto.post.*;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.post.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,9 +35,16 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostListResponse>> getPosts(
             @PathVariable Long projectId,
             @RequestParam(required = false) ProjectStatus projectStatus,
-            @RequestParam(required = false) Long stepId
+            @RequestParam(required = false) Long stepId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction
     ) {
-        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId);
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId, pageable);
         return ResponseEntity.ok(ApiResponse.success("게시글 목록 조회 성공", response));
     }
 
@@ -77,6 +83,45 @@ public class PostController {
     ) {
         postService.deletePost(projectId, postId);
         return ResponseEntity.ok(ApiResponse.success("게시글 삭제 성공", null));
+    }
+
+    /**
+     * 질문에 대한 답변 등록
+     */
+    @PostMapping("/{postId}/questions/{questionId}/answer")
+    public ResponseEntity<ApiResponse<PostAnswerResponse>> answerQuestion(
+            @PathVariable Long projectId,
+            @PathVariable Long postId,
+            @PathVariable Long questionId,
+            @RequestBody PostAnswerRequest request
+    ) {
+        PostAnswerResponse response = postService.answerQuestion(projectId, postId, questionId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("답변 등록 성공", response));
+    }
+
+    /**
+     * 게시글 승인 상태 변경 (CONFIRMED/REJECTED)
+     */
+    @PatchMapping("/{postId}/status")
+    public ResponseEntity<ApiResponse<Void>> updatePostStatus(
+            @PathVariable Long projectId,
+            @PathVariable Long postId,
+            @RequestBody PostStatusUpdateRequest request
+    ) {
+        postService.updatePostStatus(projectId, postId, request);
+        return ResponseEntity.ok(ApiResponse.success("게시글 상태 변경 성공", null));
+    }
+
+    /**
+     * 게시글 완료 (OPEN -> CLOSED)
+     */
+    @PatchMapping("/{postId}/close")
+    public ResponseEntity<ApiResponse<Void>> closePost(
+            @PathVariable Long projectId,
+            @PathVariable Long postId
+    ) {
+        postService.closePost(projectId, postId);
+        return ResponseEntity.ok(ApiResponse.success("게시글 완료 처리 성공", null));
     }
 
 }

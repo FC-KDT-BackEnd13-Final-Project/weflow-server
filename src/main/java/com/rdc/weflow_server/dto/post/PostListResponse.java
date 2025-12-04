@@ -17,6 +17,7 @@ import java.util.List;
 public class PostListResponse {
 
     private List<PostItem> posts;
+    private PageInfo pageInfo;
 
     @Getter
     @Builder
@@ -48,5 +49,18 @@ public class PostListResponse {
         private String name;
         private String role;
         private String companyName;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PageInfo {
+        private Integer currentPage;
+        private Integer pageSize;
+        private Long totalElements;
+        private Integer totalPages;
+        private Boolean hasNext;
+        private Boolean hasPrevious;
     }
 }

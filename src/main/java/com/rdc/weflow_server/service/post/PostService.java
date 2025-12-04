@@ -543,7 +543,7 @@ public class PostService {
      * 질문에 답변하기
      */
     @Transactional
-    public PostAnswerResponse answerQuestion(Long projectId, Long postId, Long questionId, PostAnswerRequest request) {
+    public PostAnswerResponse answerQuestion(Long projectId, Long postId, Long questionId, PostAnswerRequest request, HttpServletRequest httpRequest) {
         // 질문 조회
         PostQuestion question = postQuestionRepository.findById(questionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
@@ -597,6 +597,16 @@ public class PostService {
                 .user(currentUser)
                 .build();
         postAnswerRepository.save(answer);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.POST_ANSWER,
+                answer.getId(),
+                currentUser.getId(),
+                projectId,
+                httpRequest.getRemoteAddr()
+        );
 
         // Response 생성
         return PostAnswerResponse.builder()

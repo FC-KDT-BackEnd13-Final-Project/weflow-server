@@ -98,9 +98,10 @@ public class PostController {
             @PathVariable Long projectId,
             @PathVariable Long postId,
             @PathVariable Long questionId,
-            @RequestBody PostAnswerRequest request
+            @RequestBody PostAnswerRequest request,
+            HttpServletRequest httpRequest
     ) {
-        PostAnswerResponse response = postService.answerQuestion(projectId, postId, questionId, request);
+        PostAnswerResponse response = postService.answerQuestion(projectId, postId, questionId, request, httpRequest);
         return ApiResponse.success("답변 등록 성공", response);
     }
 

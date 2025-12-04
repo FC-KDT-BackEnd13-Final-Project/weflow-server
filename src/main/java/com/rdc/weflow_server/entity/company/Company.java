@@ -39,4 +39,13 @@ public class Company extends BaseEntity {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private CompanyStatus status;
+
+    // 회사 정보 수정 메서드
+    public void updateCompany(String name, String representative, String address, String memo, CompanyStatus status) {
+        if (name != null) this.name = name;
+        if (representative != null) this.representative = representative;
+        if (address != null) this.address = address;
+        if (memo != null) this.memo = memo;
+        if (status != null) this.status = status;
+    }
 }

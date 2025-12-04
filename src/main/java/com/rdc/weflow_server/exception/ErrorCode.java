@@ -30,6 +30,7 @@ public enum ErrorCode {
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_001", "회사를 찾을 수 없습니다."),
     COMPANY_BUSINESS_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "COMPANY_002", "이미 등록된 사업자번호입니다."),
     COMPANY_EMAIL_DUPLICATE(HttpStatus.CONFLICT, "COMPANY_003", "이미 등록된 이메일입니다."),
+    COMPANY_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "COMPANY_004", "이미 삭제된 회사입니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "회원을 찾을 수 없습니다."),

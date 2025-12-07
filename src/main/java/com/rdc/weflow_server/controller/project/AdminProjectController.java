@@ -5,6 +5,7 @@ import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.project.*;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.project.AdminProjectService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,13 +20,18 @@ public class AdminProjectController {
     // 프로젝트 생성
     @PostMapping
     public ApiResponse<AdminProjectCreateResponseDto> createProject(
+            @RequestBody AdminProjectCreateRequestDto request,
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody AdminProjectCreateRequestDto request
+            HttpServletRequest servletRequest
     ) {
-        return ApiResponse.success(
-                "PROJECT_CREATED",
-                adminProjectService.createProject(request, user)
+        AdminProjectCreateResponseDto response = adminProjectService.createProject(
+                request,
+                user,
+                servletRequest.getRemoteAddr()
         );
+
+        return ApiResponse.success(
+                "PROJECT_CREATED", response);
     }
 
     // 프로젝트 목록 조회
@@ -55,21 +61,28 @@ public class AdminProjectController {
     public ApiResponse<AdminProjectUpdateResponseDto> updateProject(
             @PathVariable Long projectId,
             @RequestBody AdminProjectUpdateRequestDto request,
-            @AuthenticationPrincipal CustomUserDetails user
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        return ApiResponse.success(
-                "PROJECT_UPDATED",
-                adminProjectService.updateProject(projectId, request, user)
+        AdminProjectUpdateResponseDto response = adminProjectService.updateProject(
+                projectId,
+                request,
+                user,
+                servletRequest.getRemoteAddr()
         );
+
+        return ApiResponse.success(
+                "PROJECT_UPDATED", response);
     }
 
     // 프로젝트 삭제
     @DeleteMapping("/{projectId}")
     public ApiResponse<Void> deleteProject(
             @PathVariable Long projectId,
-            @AuthenticationPrincipal CustomUserDetails user
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        adminProjectService.deleteProject(projectId, user);
+        adminProjectService.deleteProject(projectId, user, servletRequest.getRemoteAddr());
         return ApiResponse.success("PROJECT_DELETED", null);
     }
 
@@ -78,9 +91,11 @@ public class AdminProjectController {
     public ApiResponse<AdminProjectMemberAddResponseDto> addProjectMember(
             @PathVariable Long projectId,
             @RequestBody AdminProjectMemberAddRequestDto request,
-            @AuthenticationPrincipal CustomUserDetails user
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        AdminProjectMemberAddResponseDto response = adminProjectService.addProjectMember(projectId, request, user);
+        AdminProjectMemberAddResponseDto response = adminProjectService.addProjectMember(
+                projectId, request, user, servletRequest.getRemoteAddr());
         return ApiResponse.success("PROJECT_MEMBER_ADDED", response);
     }
 
@@ -101,9 +116,10 @@ public class AdminProjectController {
     public ApiResponse<Void> removeProjectMember(
             @PathVariable Long projectId,
             @PathVariable Long userId,
-            @AuthenticationPrincipal CustomUserDetails user
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        adminProjectService.removeProjectMember(projectId, userId, user);
+        adminProjectService.removeProjectMember(projectId, userId, user, servletRequest.getRemoteAddr());
         return ApiResponse.success("PROJECT_MEMBER_REMOVED", null);
     }
 }

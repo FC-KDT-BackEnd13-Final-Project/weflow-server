@@ -3,6 +3,8 @@ package com.rdc.weflow_server.service.project;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.project.*;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
@@ -16,6 +18,7 @@ import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.service.step.StepService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ public class AdminProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final StepService stepService;
     private final NotificationService notificationService;
+    private final ActivityLogService activityLogService;
 
     // 관리자 체크 공통 메소드
     private static void validateAdmin(CustomUserDetails user) {
@@ -45,7 +49,8 @@ public class AdminProjectService {
     // 프로젝트 생성
     public AdminProjectCreateResponseDto createProject(
             AdminProjectCreateRequestDto request,
-            CustomUserDetails user
+            CustomUserDetails user,
+            String ip
     ) {
         // 관리자 체크
         validateAdmin(user);
@@ -63,6 +68,16 @@ public class AdminProjectService {
         // 프로젝트 생성 시 기본 단계 자동 생성 (IN_PROGRESS 상위 흐름 하에 카테고리 순서대로)
         User creator = userRepository.findById(creatorId).orElse(null);
         stepService.createDefaultStepsForProject(project, creator);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.PROJECT,
+                project.getId(),
+                creatorId,
+                project.getId(),
+                ip
+        );
 
         // 프로젝트 생성 후 알림
         notificationService.send(
@@ -108,7 +123,8 @@ public class AdminProjectService {
     public AdminProjectUpdateResponseDto updateProject(
             Long projectId,
             AdminProjectUpdateRequestDto request,
-            CustomUserDetails user
+            CustomUserDetails user,
+            String ip
     ) {
         // 관리자 체크
         validateAdmin(user);
@@ -141,6 +157,16 @@ public class AdminProjectService {
         );
 
         projectRepository.save(project);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.PROJECT,
+                project.getId(),
+                user.getId(),
+                projectId,
+                ip
+        );
 
         // 프로젝트 정보/상태 변경 알림
         // 프로젝트 멤버들 조회
@@ -185,7 +211,11 @@ public class AdminProjectService {
     }
 
     // 프로젝트 삭제
-    public void deleteProject(Long projectId, CustomUserDetails user) {
+    public void deleteProject(
+            Long projectId,
+            CustomUserDetails user,
+            String ip
+    ) {
 
         // 관리자만 삭제 가능
         validateAdmin(user);
@@ -197,10 +227,25 @@ public class AdminProjectService {
         project.softDelete();
 
         projectRepository.save(project);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.PROJECT,
+                projectId,
+                user.getId(),
+                projectId,
+                ip
+        );
     }
 
     // 프로젝트 멤버 추가
-    public AdminProjectMemberAddResponseDto addProjectMember(Long projectId, AdminProjectMemberAddRequestDto request, CustomUserDetails user) {
+    public AdminProjectMemberAddResponseDto addProjectMember(
+            Long projectId,
+            AdminProjectMemberAddRequestDto request,
+            CustomUserDetails user,
+            String ip
+    ) {
 
         // 1) 관리자만 가능
         validateAdmin(user);
@@ -229,6 +274,16 @@ public class AdminProjectService {
         );
 
         projectMemberRepository.save(member);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.PROJECT_MEMBER,
+                member.getId(),
+                user.getId(),
+                project.getId(),
+                ip
+        );
 
         // 알림 발송
         notificationService.send(
@@ -263,7 +318,12 @@ public class AdminProjectService {
     }
 
     // 프로젝트 멤버 삭제
-    public void removeProjectMember(Long projectId, Long userId, CustomUserDetails user) {
+    public void removeProjectMember(
+            Long projectId,
+            Long userId,
+            CustomUserDetails user,
+            String ip
+    ) {
 
         // 관리자 체크
         validateAdmin(user);
@@ -285,6 +345,16 @@ public class AdminProjectService {
         // 4) Soft Delete
         member.softDelete();
         projectMemberRepository.save(member);
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.PROJECT_MEMBER,
+                member.getId(),
+                user.getId(),
+                projectId,
+                ip
+        );
 
         // 알림 발송
         notificationService.send(

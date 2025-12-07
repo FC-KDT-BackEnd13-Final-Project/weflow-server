@@ -1,7 +1,10 @@
 package com.rdc.weflow_server.service.project;
 
 import com.rdc.weflow_server.config.security.CustomUserDetails;
-import com.rdc.weflow_server.dto.project.*;
+import com.rdc.weflow_server.dto.project.request.AdminProjectCreateRequest;
+import com.rdc.weflow_server.dto.project.request.AdminProjectMemberAddRequest;
+import com.rdc.weflow_server.dto.project.request.AdminProjectUpdateRequest;
+import com.rdc.weflow_server.dto.project.response.*;
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
@@ -47,8 +50,8 @@ public class AdminProjectService {
     }
 
     // 프로젝트 생성
-    public AdminProjectCreateResponseDto createProject(
-            AdminProjectCreateRequestDto request,
+    public AdminProjectCreateResponse createProject(
+            AdminProjectCreateRequest request,
             CustomUserDetails user,
             String ip
     ) {
@@ -90,11 +93,11 @@ public class AdminProjectService {
                 null
         );
 
-        return AdminProjectCreateResponseDto.from(project);
+        return AdminProjectCreateResponse.from(project);
     }
 
     // 프로젝트 목록 조회
-    public AdminProjectListResponseDto getProjectList(
+    public AdminProjectListResponse getProjectList(
             ProjectStatus status,
             Long companyId,
             String keyword,
@@ -107,22 +110,22 @@ public class AdminProjectService {
 
         long total = projectRepository.countAdminProjects(status, companyId, keyword);
 
-        return AdminProjectListResponseDto.of(projects, total, page, size);
+        return AdminProjectListResponse.of(projects, total, page, size);
     }
 
     // 프로젝트 상세 조회
-    public AdminProjectDetailResponseDto getProjectDetail(Long projectId) {
+    public AdminProjectDetailResponse getProjectDetail(Long projectId) {
 
         Project project = projectRepository.findByIdWithMembers(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
-        return AdminProjectDetailResponseDto.from(project);
+        return AdminProjectDetailResponse.from(project);
     }
 
     // 프로젝트 수정
-    public AdminProjectUpdateResponseDto updateProject(
+    public AdminProjectUpdateResponse updateProject(
             Long projectId,
-            AdminProjectUpdateRequestDto request,
+            AdminProjectUpdateRequest request,
             CustomUserDetails user,
             String ip
     ) {
@@ -204,7 +207,7 @@ public class AdminProjectService {
             );
         }
 
-        return new AdminProjectUpdateResponseDto(
+        return new AdminProjectUpdateResponse(
                 project.getId(),
                 project.getUpdatedAt().toString()
         );
@@ -240,9 +243,9 @@ public class AdminProjectService {
     }
 
     // 프로젝트 멤버 추가
-    public AdminProjectMemberAddResponseDto addProjectMember(
+    public AdminProjectMemberAddResponse addProjectMember(
             Long projectId,
-            AdminProjectMemberAddRequestDto request,
+            AdminProjectMemberAddRequest request,
             CustomUserDetails user,
             String ip
     ) {
@@ -296,11 +299,11 @@ public class AdminProjectService {
                 null
         );
 
-        return AdminProjectMemberAddResponseDto.of(targetUser.getId(), request.getProjectRole());
+        return AdminProjectMemberAddResponse.of(targetUser.getId(), request.getProjectRole());
     }
 
     // 프로젝트 멤버 조회
-    public AdminProjectMemberListResponseDto getProjectMembers(
+    public AdminProjectMemberListResponse getProjectMembers(
             Long projectId,
             CustomUserDetails user
     ) {
@@ -314,7 +317,7 @@ public class AdminProjectService {
         // 3) 멤버 목록 조회 (삭제된 멤버도 포함)
         List<ProjectMember> members = projectMemberRepository.findAllByProjectIdIncludeDeleted(projectId);
 
-        return AdminProjectMemberListResponseDto.of(members);
+        return AdminProjectMemberListResponse.of(members);
     }
 
     // 프로젝트 멤버 삭제

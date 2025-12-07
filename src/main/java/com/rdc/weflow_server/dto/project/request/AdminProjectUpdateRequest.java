@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.request;
 
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import lombok.Getter;
@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public class AdminProjectUpdateRequestDto {
+public class AdminProjectUpdateRequest {
 
     private String name;
     private String description;

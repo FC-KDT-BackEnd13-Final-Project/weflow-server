@@ -1,7 +1,8 @@
 package com.rdc.weflow_server.service.project;
 
 import com.rdc.weflow_server.config.security.CustomUserDetails;
-import com.rdc.weflow_server.dto.project.*;
+import com.rdc.weflow_server.dto.project.response.ProjectDetailResponse;
+import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.user.UserRole;
@@ -22,7 +23,7 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
 
     // 내 프로젝트 조회
-    public List<ProjectSummaryResponseDto> getMyProjects(CustomUserDetails user) {
+    public List<ProjectSummaryResponse> getMyProjects(CustomUserDetails user) {
 
         boolean includeDeleted = user.getRole() == UserRole.SYSTEM_ADMIN;
 
@@ -32,12 +33,12 @@ public class ProjectService {
 
         // 2) 프로젝트 정보로 매핑
         return memberships.stream()
-                .map(ProjectSummaryResponseDto::from)
+                .map(ProjectSummaryResponse::from)
                 .toList();
     }
 
     // 프로젝트 상세 조회
-    public ProjectDetailResponseDto getProjectDetails(Long projectId, CustomUserDetails user) {
+    public ProjectDetailResponse getProjectDetails(Long projectId, CustomUserDetails user) {
 
         boolean includeDeleted = user.getRole() == UserRole.SYSTEM_ADMIN;
 
@@ -47,7 +48,7 @@ public class ProjectService {
         Project project = projectRepository.findByIdWithMembersFiltered(projectId, includeDeleted)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
-        return ProjectDetailResponseDto.from(project);
+        return ProjectDetailResponse.from(project);
     }
 
     // 공통 권한 체크 메서드

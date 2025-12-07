@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class AdminProjectSummaryDto {
+public class AdminProjectSummary {
     private Long id;
     private String name;
     private ProjectStatus status;
@@ -19,8 +19,8 @@ public class AdminProjectSummaryDto {
     private Boolean deleted;
     private LocalDateTime deletedAt;
 
-    public static AdminProjectSummaryDto from(Project p) {
-        return AdminProjectSummaryDto.builder()
+    public static AdminProjectSummary from(Project p) {
+        return AdminProjectSummary.builder()
                 .id(p.getId())
                 .name(p.getName())
                 .status(p.getStatus())

@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
@@ -13,17 +13,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectSummaryResponseDto {
+public class ProjectSummaryResponse {
 
     private Long projectId;
     private String name;
     private ProjectStatus status;
     private ProjectRole projectRole;
 
-    public static ProjectSummaryResponseDto from(ProjectMember pm) {
+    public static ProjectSummaryResponse from(ProjectMember pm) {
         Project p = pm.getProject();
 
-        return ProjectSummaryResponseDto.builder()
+        return ProjectSummaryResponse.builder()
                 .projectId(p.getId())
                 .name(p.getName())
                 .status(p.getStatus())

@@ -3,6 +3,7 @@ package com.rdc.weflow_server.service.project;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.project.*;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.project.ProjectRole;
@@ -15,6 +16,7 @@ import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.service.step.StepService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class AdminProjectService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final StepService stepService;
+    private final NotificationService notificationService;
 
     // 관리자 체크 공통 메소드
     private static void validateAdmin(CustomUserDetails user) {
@@ -60,6 +63,17 @@ public class AdminProjectService {
         // 프로젝트 생성 시 기본 단계 자동 생성 (IN_PROGRESS 상위 흐름 하에 카테고리 순서대로)
         User creator = userRepository.findById(creatorId).orElse(null);
         stepService.createDefaultStepsForProject(project, creator);
+
+        // 프로젝트 생성 후 알림
+        notificationService.send(
+                creator,   // 생성한 관리자
+                NotificationType.PROJECT_CREATED,
+                "프로젝트가 생성되었습니다",
+                String.format("[%s] 프로젝트가 생성되었습니다.", project.getName()),
+                project,
+                null,
+                null
+        );
 
         return AdminProjectCreateResponseDto.from(project);
     }
@@ -103,6 +117,9 @@ public class AdminProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
+        // 상태 변경 여부 비교를 위해 기존 상태 저장
+        ProjectStatus oldStatus = project.getStatus();
+
         // 회사 변경 필요할 경우
         Company company = null;
         if (request.getCustomerCompanyId() != null) {
@@ -124,6 +141,42 @@ public class AdminProjectService {
         );
 
         projectRepository.save(project);
+
+        // 프로젝트 정보/상태 변경 알림
+        // 프로젝트 멤버들 조회
+        List<ProjectMember> members = projectMemberRepository
+                .findByProjectIdAndDeletedAtIsNull(projectId);
+
+        // 어떤 타입의 알림을 보낼지 결정
+        NotificationType type;
+
+        // 상태가 변경되었을 때
+        if (request.getStatus() != null && oldStatus != request.getStatus()) {
+
+            // 완료 상태로 바뀌었으면 PROJECT_COMPLETED
+            if (request.getStatus() == ProjectStatus.CLOSED) {
+                type = NotificationType.PROJECT_COMPLETED;
+            } else {
+                type = NotificationType.PROJECT_STATUS_CHANGED;
+            }
+
+        } else {
+            // 상태 변경이 아니면 정보 변경
+            type = NotificationType.PROJECT_INFO_UPDATED;
+        }
+
+        // 모든 멤버에게 알림 발송
+        for (ProjectMember pm : members) {
+            notificationService.send(
+                    pm.getUser(),
+                    type,
+                    "프로젝트 정보 변경",
+                    String.format("[%s] 프로젝트 정보가 변경되었습니다.", project.getName()),
+                    project,
+                    null,
+                    null
+            );
+        }
 
         return new AdminProjectUpdateResponseDto(
                 project.getId(),
@@ -177,6 +230,17 @@ public class AdminProjectService {
 
         projectMemberRepository.save(member);
 
+        // 알림 발송
+        notificationService.send(
+                targetUser,
+                NotificationType.PROJECT_MEMBER_ADDED,
+                "프로젝트에 초대되었습니다",
+                String.format("[%s] 프로젝트에 참여하게 되었습니다.", project.getName()),
+                project,
+                null,
+                null
+        );
+
         return AdminProjectMemberAddResponseDto.of(targetUser.getId(), request.getProjectRole());
     }
 
@@ -221,5 +285,16 @@ public class AdminProjectService {
         // 4) Soft Delete
         member.softDelete();
         projectMemberRepository.save(member);
+
+        // 알림 발송
+        notificationService.send(
+                member.getUser(),
+                NotificationType.PROJECT_MEMBER_REMOVED,
+                "프로젝트에서 제외되었습니다",
+                String.format("[%s] 프로젝트에서 제외되었습니다.", member.getProject().getName()),
+                member.getProject(),
+                null,
+                null
+        );
     }
 }

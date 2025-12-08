@@ -1,5 +1,6 @@
 package com.rdc.weflow_server.dto.project.request;
 
+import com.rdc.weflow_server.dto.step.StepCreateRequest;
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -24,6 +26,8 @@ public class AdminProjectCreateRequest {
     private String contractFileUrl;
 
     private Long customerCompanyId;
+
+    private List<StepCreateRequest> steps;
 
     public Project toEntity(Company company, Long creatorId) {
         return Project.builder()

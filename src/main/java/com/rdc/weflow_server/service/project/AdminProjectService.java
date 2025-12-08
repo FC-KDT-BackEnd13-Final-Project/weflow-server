@@ -5,6 +5,7 @@ import com.rdc.weflow_server.dto.project.request.AdminProjectCreateRequest;
 import com.rdc.weflow_server.dto.project.request.AdminProjectMemberAddRequest;
 import com.rdc.weflow_server.dto.project.request.AdminProjectUpdateRequest;
 import com.rdc.weflow_server.dto.project.response.*;
+import com.rdc.weflow_server.dto.step.StepCreateRequest;
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
@@ -22,6 +23,7 @@ import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.service.step.StepService;
 import lombok.RequiredArgsConstructor;
@@ -64,13 +66,26 @@ public class AdminProjectService {
 
         // 프로젝트 등록한 시스템 관리자 조회
         Long creatorId = user.getId();
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Project project = request.toEntity(company, creatorId);
         projectRepository.save(project);
 
-        // 프로젝트 생성 시 기본 단계 자동 생성 (IN_PROGRESS 상위 흐름 하에 카테고리 순서대로)
-        User creator = userRepository.findById(creatorId).orElse(null);
-        stepService.createDefaultStepsForProject(project, creator);
+        // 단계 생성 로직
+        if (request.getSteps() != null && !request.getSteps().isEmpty()) {
+
+            // 프론트에서 전달된 커스텀 단계들을 그대로 생성
+            for (StepCreateRequest stepReq : request.getSteps()) {
+                AuditContext ctx = new AuditContext(creatorId, ip, project.getId());
+                stepService.createStep(project.getId(), stepReq, ctx);
+            }
+
+        } else {
+
+            // 단계가 하나도 전달되지 않은 경우 → 기본 단계 자동 생성
+            stepService.createDefaultStepsForProject(project, creator);
+        }
 
         // 로그 기록
         activityLogService.createLog(

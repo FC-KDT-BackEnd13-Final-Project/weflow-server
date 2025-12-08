@@ -16,6 +16,7 @@ public class AdminProjectMemberListItem {
     private String phone;
     private String companyName;
     private String projectRole;
+    private String userRole;
     private LocalDateTime createdAt;
     private LocalDateTime removedAt;
 
@@ -28,6 +29,7 @@ public class AdminProjectMemberListItem {
                 .phone(pm.getUser().getPhoneNumber())
                 .companyName(pm.getUser().getCompany().getName())
                 .projectRole(pm.getRole().name())
+                .userRole(pm.getUser().getRole().name())
                 .createdAt(pm.getCreatedAt())
                 .removedAt(pm.getDeletedAt())
                 .build();

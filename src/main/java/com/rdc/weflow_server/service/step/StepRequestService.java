@@ -5,7 +5,7 @@ import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
 import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
-import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
+import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
@@ -25,6 +25,7 @@ import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.file.S3FileService;
 import com.rdc.weflow_server.service.log.AuditContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class StepRequestService {
     private final ProjectMemberRepository projectMemberRepository;
     private final AttachmentRepository attachmentRepository;
     private final ActivityLogService activityLogService;
+    private final S3FileService s3FileService;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
@@ -153,7 +155,17 @@ public class StepRequestService {
             replaceLinks(stepRequest, request.getLinks(), ctx);
         }
 
-        // 수정 이력 기록
+        StepRequestStatus beforeStatus = stepRequest.getStatus();
+        // 변경 요청(CHANGE_REQUESTED) 상태에서 수정하면 재제출로 간주하여 상태를 REQUESTED로 환원
+        if (beforeStatus == StepRequestStatus.CHANGE_REQUESTED) {
+            stepRequest.updateStatus(StepRequestStatus.REQUESTED);
+            stepRequest.updateDecidedAt(null);
+            stepRequest.updateDecidedBy(null);
+            saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "status", beforeStatus.name(), StepRequestStatus.REQUESTED.name(), user);
+            refreshStepStatus(step);
+        }
+
+        // 수정 이력 기록 (내용 변경)
         saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request.getTitle(), request.getDescription()), user);
 
         activityLogService.createLog(
@@ -370,8 +382,7 @@ public class StepRequestService {
                         .reduce((first, second) -> second)
                         .map(StepRequestHistory::getAfterContent)
                         .orElse(null))
-                .files(getAttachments(stepRequest, Attachment.AttachmentType.FILE))
-                .links(getAttachments(stepRequest, Attachment.AttachmentType.LINK))
+                .attachments(getAttachments(stepRequest))
                 .createdAt(stepRequest.getCreatedAt())
                 .build();
     }
@@ -392,12 +403,18 @@ public class StepRequestService {
                 .build();
     }
 
-    private List<AttachmentResponse> getAttachments(StepRequest stepRequest, Attachment.AttachmentType type) {
+    private List<AttachmentSimpleResponse> getAttachments(StepRequest stepRequest) {
         List<Attachment> attachments = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
         return attachments.stream()
-                .filter(a -> a.getAttachmentType() == type)
-                .map(AttachmentResponse::from)
+                .map(this::toAttachmentSimpleResponse)
                 .collect(Collectors.toList());
+    }
+
+    private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {
+        String url = attachment.getAttachmentType() == Attachment.AttachmentType.FILE && attachment.getFilePath() != null
+                ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath())
+                : attachment.getUrl();
+        return AttachmentSimpleResponse.from(attachment, url);
     }
 
     private boolean hasAttachment(StepRequest stepRequest) {

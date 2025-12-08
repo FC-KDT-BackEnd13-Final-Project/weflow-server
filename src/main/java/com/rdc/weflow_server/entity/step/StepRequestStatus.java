@@ -9,6 +9,6 @@ public enum StepRequestStatus {
     CANCELED;
 
     public boolean isEditable() {
-        return this == REQUESTED;
+        return this == REQUESTED || this == CHANGE_REQUESTED;
     }
 }

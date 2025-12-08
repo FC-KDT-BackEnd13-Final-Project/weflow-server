@@ -27,13 +27,15 @@ public class ChecklistOptionService {
         ChecklistQuestion question = questionRepository.findById(request.getQuestionId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHECKLIST_QUESTION_NOT_FOUND));
 
-        int nextOrder = optionRepository.findAllByQuestionOrderByOrderIndexAsc(question).size() + 1;
+        if (request.getOrderIndex() == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "option orderIndex is required");
+        }
 
         ChecklistOption option = ChecklistOption.builder()
                 .question(question)
                 .optionText(request.getOptionText())
                 .hasInput(request.getHasInput())
-                .orderIndex(nextOrder)
+                .orderIndex(request.getOrderIndex())
                 .build();
 
         optionRepository.save(option);
@@ -79,12 +81,7 @@ public class ChecklistOptionService {
                 throw new BusinessException(ErrorCode.CHECKLIST_INVALID_OPTION_SEQUENCE);
             }
 
-            option.updateOption(
-                    option.getOptionText(),
-                    option.getHasInput(),
-                    i + 1
-            );
+            option.updateOrderIndex(i + 1);
         }
     }
-
 }

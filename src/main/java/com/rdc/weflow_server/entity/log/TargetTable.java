@@ -6,6 +6,7 @@ public enum TargetTable {
     POST_ANSWER,
     COMMENT,
     PROJECT,
+    PROJECT_MEMBER,
     USER,
     COMPANY,
     CHECKLIST,

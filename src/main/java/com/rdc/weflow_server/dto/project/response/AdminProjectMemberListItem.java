@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import lombok.Builder;
@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class AdminProjectMemberListItemDto {
+public class AdminProjectMemberListItem {
     private Long projectMemberId;
     private Long userId;
     private String username;
@@ -16,11 +16,12 @@ public class AdminProjectMemberListItemDto {
     private String phone;
     private String companyName;
     private String projectRole;
+    private String userRole;
     private LocalDateTime createdAt;
     private LocalDateTime removedAt;
 
-    public static AdminProjectMemberListItemDto from(ProjectMember pm) {
-        return AdminProjectMemberListItemDto.builder()
+    public static AdminProjectMemberListItem from(ProjectMember pm) {
+        return AdminProjectMemberListItem.builder()
                 .projectMemberId(pm.getId())
                 .userId(pm.getUser().getId())
                 .username(pm.getUser().getName())
@@ -28,6 +29,7 @@ public class AdminProjectMemberListItemDto {
                 .phone(pm.getUser().getPhoneNumber())
                 .companyName(pm.getUser().getCompany().getName())
                 .projectRole(pm.getRole().name())
+                .userRole(pm.getUser().getRole().name())
                 .createdAt(pm.getCreatedAt())
                 .removedAt(pm.getDeletedAt())
                 .build();

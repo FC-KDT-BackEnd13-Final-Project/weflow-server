@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import lombok.Builder;
@@ -8,25 +8,25 @@ import java.util.List;
 
 @Getter
 @Builder
-public class AdminProjectListResponseDto {
+public class AdminProjectListResponse {
     private long totalCount;
     private int page;
     private int size;
-    private List<AdminProjectSummaryDto> projects;
+    private List<AdminProjectSummary> projects;
 
-    public static AdminProjectListResponseDto of(
+    public static AdminProjectListResponse of(
             List<Project> projects,
             long totalCount,
             int page,
             int size
     ) {
-        return AdminProjectListResponseDto.builder()
+        return AdminProjectListResponse.builder()
                 .totalCount(totalCount)
                 .page(page)
                 .size(size)
                 .projects(
                         projects.stream()
-                                .map(AdminProjectSummaryDto::from)
+                                .map(AdminProjectSummary::from)
                                 .toList()
                 )
                 .build();

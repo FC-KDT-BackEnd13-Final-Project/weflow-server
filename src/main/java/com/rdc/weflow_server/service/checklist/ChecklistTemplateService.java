@@ -1,12 +1,15 @@
 package com.rdc.weflow_server.service.checklist;
 
+import com.rdc.weflow_server.dto.checklist.request.ChecklistCreateRequest;
 import com.rdc.weflow_server.dto.checklist.response.TemplateDetailResponse;
 import com.rdc.weflow_server.dto.checklist.response.TemplateResponse;
 import com.rdc.weflow_server.dto.checklist.request.TemplateRequest;
 import com.rdc.weflow_server.entity.checklist.Checklist;
+import com.rdc.weflow_server.entity.checklist.ChecklistOption;
 import com.rdc.weflow_server.entity.checklist.ChecklistQuestion;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.checklist.ChecklistOptionRepository;
 import com.rdc.weflow_server.repository.checklist.ChecklistQuestionRepository;
 import com.rdc.weflow_server.repository.checklist.ChecklistRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +23,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChecklistTemplateService {
     private final ChecklistRepository checklistRepository;
-    private final ChecklistQuestionRepository checklistQuestionRepository;
+    private final ChecklistQuestionRepository questionRepository;
+    private final ChecklistOptionRepository optionRepository;
 
     // 템플릿 생성
-    public Long createTemplate(TemplateRequest request) {
+    @Transactional
+    public Long createTemplate(ChecklistCreateRequest request) {
+
         Checklist template = Checklist.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -31,12 +37,39 @@ public class ChecklistTemplateService {
                 .isTemplate(true)
                 .isLocked(false)
                 .step(null)
-                .template(null)
                 .build();
 
         checklistRepository.save(template);
+
+        int qOrder = 1;
+        for (ChecklistCreateRequest.QuestionCreateRequest qReq : request.getQuestions()) {
+
+            ChecklistQuestion question = ChecklistQuestion.builder()
+                    .checklist(template)
+                    .questionText(qReq.getQuestionText())
+                    .questionType(ChecklistQuestion.QuestionType.valueOf(qReq.getQuestionType()))
+                    .orderIndex(qOrder++)
+                    .build();
+
+            questionRepository.save(question);
+
+            int oOrder = 1;
+            for (ChecklistCreateRequest.OptionCreateRequest oReq : qReq.getOptions()) {
+
+                ChecklistOption option = ChecklistOption.builder()
+                        .question(question)
+                        .optionText(oReq.getOptionText())
+                        .hasInput(oReq.getHasInput())
+                        .orderIndex(oReq.getOrderIndex() != null ? oReq.getOrderIndex() : oOrder++)
+                        .build();
+
+                optionRepository.save(option);
+            }
+        }
+
         return template.getId();
     }
+
 
     // 템플릿 목록 조회
     @Transactional(readOnly = true)
@@ -46,7 +79,7 @@ public class ChecklistTemplateService {
 
         return templates.stream()
                 .map(template -> {
-                    int questionCount = checklistQuestionRepository.countByChecklist(template);
+                    int questionCount = questionRepository.countByChecklist(template);
                     return TemplateResponse.from(template, questionCount);
                 })
                 .toList();
@@ -61,7 +94,7 @@ public class ChecklistTemplateService {
 
         // 질문 + 옵션 조회
         List<ChecklistQuestion> questions =
-                checklistQuestionRepository.findAllByChecklistOrderByOrderIndexAsc(template);
+                questionRepository.findAllByChecklistOrderByOrderIndexAsc(template);
 
         return TemplateDetailResponse.from(template, questions);
     }

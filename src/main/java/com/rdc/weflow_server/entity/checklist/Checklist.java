@@ -37,11 +37,6 @@ public class Checklist extends BaseEntity {
     @JoinColumn(name = "step_id")
     private Step step;
 
-    /** 어떤 템플릿에서 복사되었는지 (템플릿이면 NULL) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "template_id")
-    private Checklist template;
-
     /** 답변 제출 시 잠김 */
     @Column(nullable = false)
     private Boolean isLocked = false;
@@ -52,6 +47,7 @@ public class Checklist extends BaseEntity {
 
     /** 질문 리스트 */
     @OneToMany(mappedBy = "checklist", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ChecklistQuestion> questions = new ArrayList<>();
 
     // 체크리스트 수정
@@ -84,10 +80,4 @@ public class Checklist extends BaseEntity {
         if (description != null) this.description = description;
         if (category != null) this.category = category;
     }
-    // 템플릿 연결
-    public void linkTemplate(Checklist template) {
-        this.template = template;
-    }
-
-
 }

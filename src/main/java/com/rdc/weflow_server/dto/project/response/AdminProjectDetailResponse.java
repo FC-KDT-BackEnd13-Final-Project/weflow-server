@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import java.util.List;
 
 @Getter
 @Builder
-public class AdminProjectDetailResponseDto {
+public class AdminProjectDetailResponse {
 
     private Long id;
     private String name;
@@ -29,13 +29,13 @@ public class AdminProjectDetailResponseDto {
     private Boolean deleted;
     private LocalDateTime deletedAt;
 
-    private List<AdminProjectMemberDto> members;
+    private List<AdminProjectMember> members;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static AdminProjectDetailResponseDto from(Project p) {
-        return AdminProjectDetailResponseDto.builder()
+    public static AdminProjectDetailResponse from(Project p) {
+        return AdminProjectDetailResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
                 .description(p.getDescription())
@@ -59,7 +59,7 @@ public class AdminProjectDetailResponseDto {
                 .members(
                         p.getProjectMembers()
                                 .stream()
-                                .map(m -> AdminProjectMemberDto.builder()
+                                .map(m -> AdminProjectMember.builder()
                                         .userId(m.getUser().getId())
                                         .role(m.getRole().name())
                                         .build()

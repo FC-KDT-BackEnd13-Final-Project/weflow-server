@@ -39,4 +39,8 @@ public class ChecklistOption extends BaseEntity {
         if (hasInput != null) this.hasInput = hasInput;
         if (orderIndex != null) this.orderIndex = orderIndex;
     }
+    // 순서 재정렬
+    public void updateOrderIndex(int orderIndex) {
+        this.orderIndex = orderIndex;
+    }
 }

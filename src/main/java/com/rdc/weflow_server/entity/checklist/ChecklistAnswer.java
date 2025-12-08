@@ -45,12 +45,4 @@ public class ChecklistAnswer extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checklist_id", nullable = false)
     private Checklist checklist;
-
-    public void updateAnswer(ChecklistOption newOption, String newText, User user) {
-
-        this.selectedOption = newOption;
-        this.answerText = newText;
-        this.answeredBy = user;
-        this.answeredAt = LocalDateTime.now();
-    }
 }

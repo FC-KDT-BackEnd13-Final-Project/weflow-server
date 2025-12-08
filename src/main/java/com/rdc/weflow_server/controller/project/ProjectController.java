@@ -2,8 +2,8 @@ package com.rdc.weflow_server.controller.project;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
-import com.rdc.weflow_server.dto.project.ProjectDetailResponseDto;
-import com.rdc.weflow_server.dto.project.ProjectSummaryResponseDto;
+import com.rdc.weflow_server.dto.project.response.ProjectDetailResponse;
+import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.service.project.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,10 +20,10 @@ public class ProjectController {
 
     // 내 프로젝트 조회
     @GetMapping("/my")
-    public ApiResponse<List<ProjectSummaryResponseDto>> getMyProjects(
+    public ApiResponse<List<ProjectSummaryResponse>> getMyProjects(
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        List<ProjectSummaryResponseDto> projects =
+        List<ProjectSummaryResponse> projects =
                 projectService.getMyProjects(user);
 
         return ApiResponse.success("MY_PROJECT_LIST_FETCHED", projects);
@@ -31,11 +31,11 @@ public class ProjectController {
 
     // 프로젝트 상세 조회
     @GetMapping("/{projectId}")
-    public ApiResponse<ProjectDetailResponseDto> getProjectDetail(
+    public ApiResponse<ProjectDetailResponse> getProjectDetail(
             @PathVariable Long projectId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        ProjectDetailResponseDto dto = projectService.getProjectDetails(projectId, user);
+        ProjectDetailResponse dto = projectService.getProjectDetails(projectId, user);
 
         return ApiResponse.success("PROJECT_DETAIL_FETCHED", dto);
     }

@@ -1,4 +1,4 @@
-package com.rdc.weflow_server.dto.project;
+package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectDetailResponseDto {
+public class ProjectDetailResponse {
 
     private Long id;
     private String name;
@@ -22,8 +22,8 @@ public class ProjectDetailResponseDto {
 
     private Long contractAmount;
 
-    public static ProjectDetailResponseDto from(Project project) {
-        return ProjectDetailResponseDto.builder()
+    public static ProjectDetailResponse from(Project project) {
+        return ProjectDetailResponse.builder()
                 .id(project.getId())
                 .name(project.getName())
                 .description(project.getDescription())

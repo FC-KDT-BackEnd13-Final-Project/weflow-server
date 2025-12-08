@@ -22,8 +22,6 @@ public class ChecklistDetailResponse {
     private Long stepId;
     private String stepName;
 
-    private Long templateId; // 템플릿 기반이면 값 있음
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -38,7 +36,6 @@ public class ChecklistDetailResponse {
                 .isLocked(checklist.getIsLocked())
                 .stepId(checklist.getStep() != null ? checklist.getStep().getId() : null)
                 .stepName(checklist.getStep() != null ? checklist.getStep().getTitle() : null)
-                .templateId(checklist.getTemplate() != null ? checklist.getTemplate().getId() : null)
                 .createdAt(checklist.getCreatedAt())
                 .updatedAt(checklist.getUpdatedAt())
                 .questions(questions)

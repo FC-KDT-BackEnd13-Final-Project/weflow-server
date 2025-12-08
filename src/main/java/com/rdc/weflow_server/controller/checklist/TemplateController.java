@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.controller.checklist;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.dto.checklist.request.ChecklistCreateRequest;
 import com.rdc.weflow_server.dto.checklist.response.TemplateDetailResponse;
 import com.rdc.weflow_server.dto.checklist.response.TemplateResponse;
 import com.rdc.weflow_server.dto.checklist.request.TemplateRequest;
@@ -18,7 +19,7 @@ public class TemplateController {
 
     // 템플릿 생성
     @PostMapping
-    public ApiResponse<Long> createTemplate(@RequestBody TemplateRequest request) {
+    public ApiResponse<Long> createTemplate(@RequestBody ChecklistCreateRequest request) {
         Long templateId = checklistTemplateService.createTemplate(request);
         return ApiResponse.success(
                 "TEMPLATE_CREATED",

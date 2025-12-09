@@ -18,14 +18,10 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
      * - 프로젝트 생성일 DESC 정렬
      */
     @Query("select pm from ProjectMember pm " +
-            "join fetch pm.project p " +
-            "where pm.user.id = :userId " +
+            "where pm.project.id = :projectId " +
             "and pm.deletedAt is null " +
-            "and p.deletedAt is null " +
-            "order by p.createdAt desc")
-    List<ProjectMember> findActiveMembershipsByUserIdOrderByProjectCreatedDesc(
-            @Param("userId") Long userId
-    );
+            "order by pm.createdAt desc")
+    List<ProjectMember> findActiveByProjectId(Long projectId);
 
     // 프로젝트 접근 확인용
     Optional<ProjectMember> findByProjectIdAndUserId(Long projectId, Long userId);

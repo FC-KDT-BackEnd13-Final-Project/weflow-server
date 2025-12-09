@@ -36,7 +36,7 @@ public class ProjectMemberService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_PROJECT_ACCESS));
 
         // 전체 멤버 반환 (삭제된 멤버 제외)
-        return projectMemberRepository.findActiveMembershipsByUserIdOrderByProjectCreatedDesc(projectId)
+        return projectMemberRepository.findActiveByProjectId(projectId)
                 .stream()
                 .map(ProjectMemberResponse::from)
                 .toList();
@@ -165,7 +165,7 @@ public class ProjectMemberService {
 
         // (5) 자기 자신 삭제 금지
         if (target.getUser().getId().equals(requesterId)) {
-            throw new BusinessException(ErrorCode.PROJECT_MEMBER_REMOVE_FORBIDDEN);
+            throw new BusinessException(ErrorCode.CANNOT_REMOVE_SELF);
         }
 
         // (6) Soft delete 적용

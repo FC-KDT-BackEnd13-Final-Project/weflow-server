@@ -19,6 +19,8 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.entity.notification.NotificationType;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
@@ -45,6 +47,7 @@ public class StepRequestService {
     private final ProjectMemberRepository projectMemberRepository;
     private final AttachmentRepository attachmentRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
@@ -98,6 +101,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), stepRequest.getRequestTitle());
         return toResponse(saved);
     }
 
@@ -164,6 +168,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), stepRequest.getRequestTitle());
         return toResponse(stepRequest);
     }
 
@@ -238,6 +243,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), "승인 요청이 취소되었습니다.");
     }
 
     private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds, AuditContext ctx) {
@@ -430,6 +436,29 @@ public class StepRequestService {
                 .updatedBy(updatedBy)
                 .build();
         stepRequestHistoryRepository.save(history);
+    }
+
+    private void notifyClients(StepRequest stepRequest, NotificationType type, String title, String message) {
+        if (stepRequest == null || stepRequest.getStep() == null || stepRequest.getStep().getProject() == null) {
+            return;
+        }
+        List<User> receivers = projectMemberRepository.findByProjectIdAndDeletedAtIsNull(stepRequest.getStep().getProject().getId())
+                .stream()
+                .map(pm -> pm.getUser())
+                .filter(u -> u != null && u.getRole() == UserRole.CLIENT)
+                .toList();
+
+        receivers.forEach(receiver ->
+                notificationService.send(
+                        receiver,
+                        type,
+                        String.format("승인요청 - %s", title),
+                        message,
+                        stepRequest.getStep().getProject(),
+                        null,
+                        stepRequest
+                )
+        );
     }
 
     public void refreshStepStatus(Step step) {

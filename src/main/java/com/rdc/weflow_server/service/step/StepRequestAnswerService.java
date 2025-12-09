@@ -4,6 +4,7 @@ import com.rdc.weflow_server.dto.step.StepRequestAnswerCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestAnswerResponse;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
+import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestAnswer;
 import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
@@ -21,6 +22,7 @@ import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.log.AuditContext;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,7 @@ public class StepRequestAnswerService {
     private final ProjectMemberRepository projectMemberRepository;
     private final StepRequestService stepRequestService;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, AuditContext ctx, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -110,6 +113,7 @@ public class StepRequestAnswerService {
                 stepRequest.getStep().getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyRequesterDecision(stepRequest, saved);
         return toResponse(saved);
     }
 
@@ -169,5 +173,22 @@ public class StepRequestAnswerService {
                 .updatedBy(updatedBy)
                 .build();
         stepRequestHistoryRepository.save(history);
+    }
+
+    private void notifyRequesterDecision(StepRequest stepRequest, StepRequestAnswer answer) {
+        if (stepRequest == null || stepRequest.getRequestedBy() == null) {
+            return;
+        }
+        String title = String.format("승인결과 - %s", stepRequest.getStep() != null ? stepRequest.getStep().getTitle() : "");
+        String message = String.format("요청: %s / 결과: %s", stepRequest.getRequestTitle(), answer.getResponse().name());
+        notificationService.send(
+                stepRequest.getRequestedBy(),
+                NotificationType.STEP_DECISION,
+                title,
+                message,
+                stepRequest.getStep() != null ? stepRequest.getStep().getProject() : null,
+                null,
+                stepRequest
+        );
     }
 }

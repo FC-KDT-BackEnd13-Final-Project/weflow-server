@@ -30,8 +30,8 @@ public class AttachmentService {
      * 파일 업로드 완료 후 첨부파일 메타데이터 저장
      */
     @Transactional
-    public AttachmentSimpleResponse uploadFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
+    public AttachmentSimpleResponse uploadFile(MultipartFile file, Attachment.TargetType targetType) {
+        if (file == null || file.isEmpty() || targetType == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
@@ -43,7 +43,7 @@ public class AttachmentService {
         s3FileService.uploadFile(key, file);
 
         Attachment attachment = Attachment.builder()
-                .targetType(Attachment.TargetType.STEP_REQUEST)
+                .targetType(targetType)
                 .attachmentType(Attachment.AttachmentType.FILE)
                 .filePath(key)
                 .fileName(originalFileName)
@@ -60,14 +60,14 @@ public class AttachmentService {
      * 링크 추가
      */
     @Transactional
-    public AttachmentSimpleResponse addLink(AttachmentLinkRequest request) {
-        if (request == null || !StringUtils.hasText(request.getUrl())) {
+    public AttachmentSimpleResponse addLink(AttachmentLinkRequest request, Attachment.TargetType targetType) {
+        if (request == null || !StringUtils.hasText(request.getUrl()) || targetType == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         String name = StringUtils.hasText(request.getName()) ? request.getName() : request.getUrl();
         Attachment attachment = Attachment.builder()
-                .targetType(Attachment.TargetType.STEP_REQUEST)
+                .targetType(targetType)
                 .attachmentType(Attachment.AttachmentType.LINK)
                 .fileName(name)
                 .url(request.getUrl())

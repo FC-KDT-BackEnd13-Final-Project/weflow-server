@@ -25,15 +25,17 @@ public class AttachmentController {
 
     @Operation(summary = "파일 업로드 완료 후 메타데이터 저장")
     @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<AttachmentSimpleResponse> uploadFile(@RequestPart("file") MultipartFile file) {
-        AttachmentSimpleResponse response = attachmentService.uploadFile(file);
+    public ApiResponse<AttachmentSimpleResponse> uploadFile(@RequestPart("file") MultipartFile file,
+                                                            @RequestParam Attachment.TargetType targetType) {
+        AttachmentSimpleResponse response = attachmentService.uploadFile(file, targetType);
         return ApiResponse.success("FILE_UPLOADED", response);
     }
 
     @Operation(summary = "링크 추가")
     @PostMapping("/links")
-    public ApiResponse<AttachmentSimpleResponse> addLink(@RequestBody AttachmentLinkRequest request) {
-        AttachmentSimpleResponse response = attachmentService.addLink(request);
+    public ApiResponse<AttachmentSimpleResponse> addLink(@RequestBody AttachmentLinkRequest request,
+                                                         @RequestParam Attachment.TargetType targetType) {
+        AttachmentSimpleResponse response = attachmentService.addLink(request, targetType);
         return ApiResponse.success("LINK_ADDED", response);
     }
 

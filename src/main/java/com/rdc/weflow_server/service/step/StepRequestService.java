@@ -5,7 +5,7 @@ import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
 import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
-import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
+import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
@@ -27,6 +27,7 @@ import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.file.S3FileService;
 import com.rdc.weflow_server.service.log.AuditContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class StepRequestService {
     private final ProjectMemberRepository projectMemberRepository;
     private final AttachmentRepository attachmentRepository;
     private final ActivityLogService activityLogService;
+    private final S3FileService s3FileService;
     private final NotificationService notificationService;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
@@ -173,34 +175,38 @@ public class StepRequestService {
     }
 
     @Transactional(readOnly = true)
-    public StepRequestListResponse getRequestsByStep(Long stepId) {
+    public StepRequestListResponse getRequestsByStep(Long stepId, int page, int size) {
         // 삭제된 Step이면 조회도 404 처리
         stepService.getStepOrThrow(stepId);
-        List<StepRequest> requests = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId);
-        List<StepRequestSummaryResponse> summaries = requests.stream()
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        var pageResult = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId, pageable);
+        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
+                .stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
 
         return StepRequestListResponse.builder()
-                .totalCount((long) summaries.size())
-                .page(0)
-                .size(summaries.size())
+                .totalCount(pageResult.getTotalElements())
+                .page(pageResult.getNumber())
+                .size(pageResult.getSize())
                 .stepRequestSummaryResponses(summaries)
                 .build();
     }
 
     @Transactional(readOnly = true)
-    public StepRequestListResponse getRequestsByProject(Long projectId) {
+    public StepRequestListResponse getRequestsByProject(Long projectId, int page, int size) {
         // 정책: 삭제된 Step에 속한 Request도 프로젝트 히스토리로 조회 가능
-        List<StepRequest> requests = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId);
-        List<StepRequestSummaryResponse> summaries = requests.stream()
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        var pageResult = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId, pageable);
+        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
+                .stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
 
         return StepRequestListResponse.builder()
-                .totalCount((long) summaries.size())
-                .page(0)
-                .size(summaries.size())
+                .totalCount(pageResult.getTotalElements())
+                .page(pageResult.getNumber())
+                .size(pageResult.getSize())
                 .stepRequestSummaryResponses(summaries)
                 .build();
     }
@@ -376,8 +382,7 @@ public class StepRequestService {
                         .reduce((first, second) -> second)
                         .map(StepRequestHistory::getAfterContent)
                         .orElse(null))
-                .files(getAttachments(stepRequest, Attachment.AttachmentType.FILE))
-                .links(getAttachments(stepRequest, Attachment.AttachmentType.LINK))
+                .attachments(getAttachments(stepRequest))
                 .createdAt(stepRequest.getCreatedAt())
                 .build();
     }
@@ -398,12 +403,18 @@ public class StepRequestService {
                 .build();
     }
 
-    private List<AttachmentResponse> getAttachments(StepRequest stepRequest, Attachment.AttachmentType type) {
+    private List<AttachmentSimpleResponse> getAttachments(StepRequest stepRequest) {
         List<Attachment> attachments = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
         return attachments.stream()
-                .filter(a -> a.getAttachmentType() == type)
-                .map(AttachmentResponse::from)
+                .map(this::toAttachmentSimpleResponse)
                 .collect(Collectors.toList());
+    }
+
+    private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {
+        String url = attachment.getAttachmentType() == Attachment.AttachmentType.FILE && attachment.getFilePath() != null
+                ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath(), attachment.getFileName())
+                : attachment.getUrl();
+        return AttachmentSimpleResponse.from(attachment, url);
     }
 
     private boolean hasAttachment(StepRequest stepRequest) {

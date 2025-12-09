@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -58,6 +59,8 @@ public class ActivityLogService {
             String targetTable,
             Long userId,
             Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             Pageable pageable
     ) {
         Page<ActivityLogResponseDto> page = activityLogRepository.searchLogs(
@@ -65,6 +68,8 @@ public class ActivityLogService {
                 targetTable,
                 userId,
                 projectId,
+                startDate,
+                endDate,
                 pageable
         );
 
@@ -111,10 +116,14 @@ public class ActivityLogService {
     // 프로젝트별 로그 조회
     public ActivityLogListResponseDto getLogsByProject(
             Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             Pageable pageable
     ) {
         Page<ActivityLogResponseDto> page = activityLogRepository.searchByProject(
                 projectId,
+                startDate,
+                endDate,
                 pageable
         );
 

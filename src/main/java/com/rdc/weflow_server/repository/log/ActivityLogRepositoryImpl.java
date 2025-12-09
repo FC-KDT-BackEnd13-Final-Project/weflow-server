@@ -32,14 +32,26 @@ public class ActivityLogRepositoryImpl implements ActivityLogRepositoryCustom {
             String targetTable,
             Long userId,
             Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             Pageable pageable
     ) {
         BooleanBuilder builder = new BooleanBuilder();
 
+        // 기본 필터
         if (actionType != null) builder.and(activityLog.actionType.stringValue().eq(actionType));
         if (targetTable != null) builder.and(activityLog.targetTable.stringValue().eq(targetTable));
         if (userId != null) builder.and(activityLog.user.id.eq(userId));
         if (projectId != null) builder.and(activityLog.project.id.eq(projectId));
+
+        // 날짜 필터 추가
+        if (startDate != null) {
+            builder.and(activityLog.createdAt.goe(startDate));
+        }
+
+        if (endDate != null) {
+            builder.and(activityLog.createdAt.loe(endDate));
+        }
 
         var resultQuery = queryFactory
                 .select(
@@ -77,17 +89,21 @@ public class ActivityLogRepositoryImpl implements ActivityLogRepositoryCustom {
 
     @Override
     public Page<ActivityLogResponseDto> searchByTarget(String targetTable, Long targetId, Pageable pageable) {
-        return searchLogs(null, targetTable, null, null, pageable);
+        return searchLogs(null, targetTable, null, null, null, null, pageable);
     }
 
     @Override
     public Page<ActivityLogResponseDto> searchByUser(Long userId, Pageable pageable) {
-        return searchLogs(null, null, userId, null, pageable);
+        return searchLogs(null, null, userId, null, null, null, pageable);
     }
 
     @Override
-    public Page<ActivityLogResponseDto> searchByProject(Long projectId, Pageable pageable) {
-        return searchLogs(null, null, null, projectId, pageable);
+    public Page<ActivityLogResponseDto> searchByProject(
+            Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Pageable pageable) {
+        return searchLogs(null, null, null, projectId, startDate, endDate, pageable);
     }
 
     @Override // 로그 통계
@@ -237,4 +253,30 @@ public class ActivityLogRepositoryImpl implements ActivityLogRepositoryCustom {
                 .orderBy(activityLog.createdAt.desc())
                 .fetch();
     }
+    @Override
+    public List<ActivityLogResponseDto> findRecentLogs(int limit) {
+        return queryFactory
+                .select(
+                        Projections.fields(
+                                ActivityLogResponseDto.class,
+                                activityLog.id.as("logId"),
+                                activityLog.actionType.stringValue().as("actionType"),
+                                activityLog.targetTable.stringValue().as("targetTable"),
+                                activityLog.targetId,
+                                activityLog.ipAddress,
+                                activityLog.createdAt,
+                                user.id.as("userId"),
+                                user.name.as("userName"),
+                                project.id.as("projectId"),
+                                project.name.as("projectName")
+                        )
+                )
+                .from(activityLog)
+                .leftJoin(activityLog.user, user)
+                .leftJoin(activityLog.project, project)
+                .orderBy(activityLog.id.desc())
+                .limit(limit)
+                .fetch();
+    }
+
 }

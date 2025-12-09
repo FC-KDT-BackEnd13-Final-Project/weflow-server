@@ -43,4 +43,8 @@ public class ProjectMember extends BaseEntity {
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public void updateRole(ProjectRole newRole) {
+        this.role = newRole;
+    }
 }

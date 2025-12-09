@@ -1,6 +1,8 @@
 package com.rdc.weflow_server.repository.project;
 
 import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectRole;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +35,10 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
             "WHERE pm.project.id = :projectId")
     List<ProjectMember> findAllByProjectIdIncludeDeleted(@Param("projectId") Long projectId);
 
+    List<ProjectMember> findAllByProjectId(Long projectId);
+
+    Optional<ProjectMember> findByProjectIdAndUserId(Long projectId, Long userId);
+
     /**
      * 알림 발송용 멤버 조회 (가벼운 조회)
      * - 삭제된 멤버 제외 (알림 발송 방지)
@@ -41,9 +47,21 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     List<ProjectMember> findByProjectIdAndDeletedAtIsNull(Long projectId);
 
     @Query("SELECT pm FROM ProjectMember pm " +
-            "WHERE pm.project.id = :projectId AND pm.user.id = :userId")
-    Optional<ProjectMember> findByProjectIdAndUserId(
+            "JOIN FETCH pm.user u " +
+            "JOIN FETCH u.company c " +
+            "WHERE pm.project.id = :projectId " +
+            "AND pm.deletedAt IS NULL")
+    List<ProjectMember> findActiveMembersByProjectId(@Param("projectId") Long projectId);
+
+    @Query("SELECT pm FROM ProjectMember pm " +
+            "WHERE pm.project.id = :projectId " +
+            "AND pm.user.id = :userId " +
+            "AND pm.deletedAt IS NULL")
+    Optional<ProjectMember> findActiveByProjectIdAndUserId(
             @Param("projectId") Long projectId,
             @Param("userId") Long userId
     );
+
+    List<ProjectMember> findTop5ByUserIdOrderByProject_CreatedAtDesc(Long userId);
+    long countByUserIdAndProject_Status(Long userId, ProjectStatus status);
 }

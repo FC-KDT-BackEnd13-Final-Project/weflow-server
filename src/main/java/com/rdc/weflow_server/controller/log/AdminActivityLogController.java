@@ -6,9 +6,12 @@ import com.rdc.weflow_server.dto.log.ActivityLogStatisticsDto;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/admin/logs")
@@ -24,6 +27,8 @@ public class AdminActivityLogController {
             @RequestParam(required = false) String targetTable,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable
     ) {
         ActivityLogListResponseDto data = activityLogService.searchLogs(
@@ -31,6 +36,8 @@ public class AdminActivityLogController {
                 targetTable,
                 userId,
                 projectId,
+                startDate,
+                endDate,
                 pageable
         );
 
@@ -68,9 +75,13 @@ public class AdminActivityLogController {
     @GetMapping("/projects/{projectId}")
     public ApiResponse<ActivityLogListResponseDto> getProjectLogs(
             @PathVariable Long projectId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable
     ) {
-        ActivityLogListResponseDto data = activityLogService.getLogsByProject(projectId, pageable);
+        ActivityLogListResponseDto data = activityLogService.getLogsByProject(projectId, startDate, endDate, pageable);
 
         return ApiResponse.success("PROJECT_LOGS_FETCHED", data);
     }

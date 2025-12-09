@@ -415,7 +415,7 @@ public class StepRequestService {
 
     private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {
         String url = attachment.getAttachmentType() == Attachment.AttachmentType.FILE && attachment.getFilePath() != null
-                ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath())
+                ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath(), attachment.getFileName())
                 : attachment.getUrl();
         return AttachmentSimpleResponse.from(attachment, url);
     }

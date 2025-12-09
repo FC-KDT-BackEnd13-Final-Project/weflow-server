@@ -13,14 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,14 +34,18 @@ public class StepRequestController {
     }
 
     @GetMapping("/steps/{stepId}/requests")
-    public ApiResponse<StepRequestListResponse> getRequestsByStep(@PathVariable Long stepId) {
-        StepRequestListResponse response = stepRequestService.getRequestsByStep(stepId);
+    public ApiResponse<StepRequestListResponse> getRequestsByStep(@PathVariable Long stepId,
+                                                                  @RequestParam(defaultValue = "0") int page,
+                                                                  @RequestParam(defaultValue = "20") int size) {
+        StepRequestListResponse response = stepRequestService.getRequestsByStep(stepId, page, size);
         return ApiResponse.success("stepRequest.listByStep.success", response);
     }
 
     @GetMapping("/projects/{projectId}/requests")
-    public ApiResponse<StepRequestListResponse> getRequestsByProject(@PathVariable Long projectId) {
-        StepRequestListResponse response = stepRequestService.getRequestsByProject(projectId);
+    public ApiResponse<StepRequestListResponse> getRequestsByProject(@PathVariable Long projectId,
+                                                                     @RequestParam(defaultValue = "0") int page,
+                                                                     @RequestParam(defaultValue = "20") int size) {
+        StepRequestListResponse response = stepRequestService.getRequestsByProject(projectId, page, size);
         return ApiResponse.success("stepRequest.listByProject.success", response);
     }
 

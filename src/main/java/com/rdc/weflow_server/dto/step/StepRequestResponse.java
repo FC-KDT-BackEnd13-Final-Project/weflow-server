@@ -1,6 +1,6 @@
 package com.rdc.weflow_server.dto.step;
 
-import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
+import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +26,6 @@ public class StepRequestResponse {
     private Long decidedBy;
     private String decidedByName;
     private String decisionReason;
-    private List<AttachmentResponse> files;
-    private List<AttachmentResponse> links;
+    private List<AttachmentSimpleResponse> attachments;
     private LocalDateTime createdAt;
 }

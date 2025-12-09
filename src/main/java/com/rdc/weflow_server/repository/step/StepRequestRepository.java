@@ -4,6 +4,8 @@ import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,12 @@ public interface StepRequestRepository extends JpaRepository<StepRequest, Long> 
 
     @EntityGraph(attributePaths = {"step", "requestedBy"})
     List<StepRequest> findByStep_Project_Id(Long projectId);
+
+    @EntityGraph(attributePaths = {"step", "requestedBy"})
+    Page<StepRequest> findByStep_IdOrderByCreatedAtDesc(Long stepId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"step", "requestedBy"})
+    Page<StepRequest> findByStep_Project_IdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
     boolean existsByStep_Id(Long stepId);
 

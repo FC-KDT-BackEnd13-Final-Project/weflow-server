@@ -3,11 +3,14 @@ package com.rdc.weflow_server.service.user;
 import com.rdc.weflow_server.dto.user.request.*;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,13 +29,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivityLogService activityLogService;
 
     /**
      * 관리자 - 회원 생성
      * POST /api/admin/users
      */
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
+    public UserResponse createUser(CreateUserRequest request, Long adminId, String ipAddress) {
         // 1. 회사 존재 확인
         Company company = companyRepository.findById(request.getCompanyId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
@@ -51,7 +55,17 @@ public class UserService {
         // 5. 저장
         User savedUser = userRepository.save(user);
 
-        // 6. Entity → Response 변환
+        // 6. 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.USER,
+                savedUser.getId(),
+                adminId,
+                null,
+                ipAddress
+        );
+
+        // 7. Entity → Response 변환
         return UserResponse.from(savedUser);
     }
 
@@ -60,10 +74,10 @@ public class UserService {
      * POST /api/admin/users/batch
      */
     @Transactional
-    public List<UserResponse> createUsersBatch(List<CreateUserRequest> requests) {
+    public List<UserResponse> createUsersBatch(List<CreateUserRequest> requests, Long adminId, String ipAddress) {
         // 기존 단건 생성 메서드(createUser)를 재활용하여 반복 처리
         return requests.stream()
-                .map(this::createUser)
+                .map(request -> createUser(request, adminId, ipAddress))
                 .collect(Collectors.toList());
     }
 
@@ -90,7 +104,7 @@ public class UserService {
      * PATCH /api/users/me
      */
     @Transactional
-    public UserResponse updateMyInfo(Long userId, UpdateUserRequest request) {
+    public UserResponse updateMyInfo(Long userId, UpdateUserRequest request, String ipAddress) {
         // 1. 유저 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -105,7 +119,17 @@ public class UserService {
         // 3. 정보 수정
         user.updateMyInfo(request.getName(), request.getPhoneNumber());
 
-        // 4. Entity → Response 변환
+        // 4. 로그 기록 (본인 수정)
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.USER,
+                userId,
+                userId,
+                null,
+                ipAddress
+        );
+
+        // 5. Entity → Response 변환
         return UserResponse.from(user);
     }
 
@@ -114,7 +138,7 @@ public class UserService {
      * PATCH /api/users/me/password
      */
     @Transactional
-    public void changePassword(Long userId, ChangePasswordRequest request) {
+    public void changePassword(Long userId, ChangePasswordRequest request, String ipAddress) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -140,6 +164,16 @@ public class UserService {
 
         // 4. 비밀번호 변경 (암호화 + 임시 비밀번호 해제)
         user.changePassword(passwordEncoder.encode(request.getNewPassword()));
+
+        // 5. 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.USER,
+                userId,
+                userId,
+                null,
+                ipAddress
+        );
     }
 
     /**
@@ -159,7 +193,7 @@ public class UserService {
      * PATCH /api/admin/users/{userId}
      */
     @Transactional
-    public UserResponse updateUser(Long userId, UpdateUserAdminRequest request) {
+    public UserResponse updateUser(Long userId, UpdateUserAdminRequest request, Long adminId, String ipAddress) {
         // 1. 수정할 유저 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -187,6 +221,16 @@ public class UserService {
                 company
         );
 
+        // 5. 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.USER,
+                userId,
+                adminId,
+                null,
+                ipAddress
+        );
+
         return UserResponse.from(user);
     }
 
@@ -195,7 +239,7 @@ public class UserService {
      * DELETE /api/admin/users/{userId}
      */
     @Transactional
-    public void deleteUser(Long userId) {
+    public void deleteUser(Long userId, Long adminId, String ipAddress) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -206,5 +250,15 @@ public class UserService {
 
         // Soft Delete 수행
         user.delete();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.USER,
+                userId,
+                adminId,
+                null,
+                ipAddress
+        );
     }
 }

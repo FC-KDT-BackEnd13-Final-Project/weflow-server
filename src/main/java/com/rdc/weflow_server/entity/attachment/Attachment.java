@@ -62,6 +62,7 @@ public class Attachment extends BaseEntity {
         POST,
         POST_COMMENT,
         STEP_REQUEST,
+        STEP_REQUEST_ANSWER,
         SUPPORT,
         SUPPORT_COMMENT
     }

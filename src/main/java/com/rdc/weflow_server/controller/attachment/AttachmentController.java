@@ -1,17 +1,15 @@
 package com.rdc.weflow_server.controller.attachment;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.dto.attachment.AttachmentFileRequest;
 import com.rdc.weflow_server.dto.attachment.AttachmentLinkRequest;
 import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
-import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.service.attachment.AttachmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -24,18 +22,16 @@ public class AttachmentController {
     private final AttachmentService attachmentService;
 
     @Operation(summary = "파일 업로드 완료 후 메타데이터 저장")
-    @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<AttachmentSimpleResponse> uploadFile(@RequestPart("file") MultipartFile file,
-                                                            @RequestParam Attachment.TargetType targetType) {
-        AttachmentSimpleResponse response = attachmentService.uploadFile(file, targetType);
+    @PostMapping("/files")
+    public ApiResponse<AttachmentResponse> uploadFile(@RequestBody AttachmentFileRequest request) {
+        AttachmentResponse response = attachmentService.uploadFile(request);
         return ApiResponse.success("FILE_UPLOADED", response);
     }
 
     @Operation(summary = "링크 추가")
     @PostMapping("/links")
-    public ApiResponse<AttachmentSimpleResponse> addLink(@RequestBody AttachmentLinkRequest request,
-                                                         @RequestParam Attachment.TargetType targetType) {
-        AttachmentSimpleResponse response = attachmentService.addLink(request, targetType);
+    public ApiResponse<AttachmentResponse> addLink(@RequestBody AttachmentLinkRequest request) {
+        AttachmentResponse response = attachmentService.addLink(request);
         return ApiResponse.success("LINK_ADDED", response);
     }
 

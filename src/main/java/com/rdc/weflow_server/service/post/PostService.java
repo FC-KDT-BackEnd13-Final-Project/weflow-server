@@ -52,7 +52,7 @@ public class PostService {
      * TODO: 나중에 fetch join 등으로 최적화 필요.
      */
     public PostDetailResponse getPost(Long projectId, Long postId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         // projectId 검증: 해당 게시글이 요청한 프로젝트에 속하는지 확인
@@ -178,11 +178,11 @@ public class PostService {
 
         // 필터에 따라 게시글 조회
         if (stepId != null) {
-            postPage = postRepository.findByStepId(stepId, pageable);
+            postPage = postRepository.findByStepIdAndDeletedAtIsNull(stepId, pageable);
         } else if (projectStatus != null) {
-            postPage = postRepository.findByStepProjectIdAndStepProjectStatus(projectId, projectStatus, pageable);
+            postPage = postRepository.findByStepProjectIdAndStepProjectStatusAndDeletedAtIsNull(projectId, projectStatus, pageable);
         } else {
-            postPage = postRepository.findByStepProjectId(projectId, pageable);
+            postPage = postRepository.findByStepProjectIdAndDeletedAtIsNull(projectId, pageable);
         }
 
         // PostListResponse로 변환
@@ -284,7 +284,7 @@ public class PostService {
         // ParentPost 조회 (답글인 경우)
         Post parentPost = null;
         if (request.getParentPostId() != null) {
-            parentPost = postRepository.findById(request.getParentPostId())
+            parentPost = postRepository.findByIdAndDeletedAtIsNull(request.getParentPostId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         }
 

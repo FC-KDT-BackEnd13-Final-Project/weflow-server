@@ -1,22 +1,19 @@
 package com.rdc.weflow_server.service.attachment;
 
+import com.rdc.weflow_server.dto.attachment.AttachmentFileRequest;
 import com.rdc.weflow_server.dto.attachment.AttachmentLinkRequest;
 import com.rdc.weflow_server.dto.attachment.AttachmentResponse;
-import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.service.file.S3FileService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,51 +27,35 @@ public class AttachmentService {
      * 파일 업로드 완료 후 첨부파일 메타데이터 저장
      */
     @Transactional
-    public AttachmentSimpleResponse uploadFile(MultipartFile file, Attachment.TargetType targetType) {
-        if (file == null || file.isEmpty() || targetType == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        String originalFileName = StringUtils.hasText(file.getOriginalFilename())
-                ? file.getOriginalFilename()
-                : "file";
-        String key = buildAttachmentKey(originalFileName);
-
-        s3FileService.uploadFile(key, file);
-
+    public AttachmentResponse uploadFile(AttachmentFileRequest request) {
         Attachment attachment = Attachment.builder()
-                .targetType(targetType)
+                .targetType(request.getTargetType())
+                .targetId(request.getTargetId())
                 .attachmentType(Attachment.AttachmentType.FILE)
-                .filePath(key)
-                .fileName(originalFileName)
-                .fileSize(file.getSize())
-                .contentType(file.getContentType())
+                .filePath(request.getFilePath())
+                .fileName(request.getFileName())
+                .fileSize(request.getFileSize())
+                .contentType(request.getContentType())
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        String downloadUrl = s3FileService.generateDownloadPresignedUrl(key);
-        return AttachmentSimpleResponse.from(saved, downloadUrl);
+        return AttachmentResponse.from(saved);
     }
 
     /**
      * 링크 추가
      */
     @Transactional
-    public AttachmentSimpleResponse addLink(AttachmentLinkRequest request, Attachment.TargetType targetType) {
-        if (request == null || !StringUtils.hasText(request.getUrl()) || targetType == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        String name = StringUtils.hasText(request.getName()) ? request.getName() : request.getUrl();
+    public AttachmentResponse addLink(AttachmentLinkRequest request) {
         Attachment attachment = Attachment.builder()
-                .targetType(targetType)
+                .targetType(request.getTargetType())
+                .targetId(request.getTargetId())
                 .attachmentType(Attachment.AttachmentType.LINK)
-                .fileName(name)
                 .url(request.getUrl())
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        return AttachmentSimpleResponse.from(saved, request.getUrl());
+        return AttachmentResponse.from(saved);
     }
 
     /**
@@ -126,10 +107,5 @@ public class AttachmentService {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
         return AttachmentResponse.from(attachment);
-    }
-
-    private String buildAttachmentKey(String originalFileName) {
-        String cleanFileName = StringUtils.cleanPath(originalFileName).replace(" ", "_");
-        return "attachments/" + UUID.randomUUID() + "-" + cleanFileName;
     }
 }

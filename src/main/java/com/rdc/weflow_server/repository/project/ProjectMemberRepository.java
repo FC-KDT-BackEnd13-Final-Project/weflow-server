@@ -62,4 +62,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
             "LEFT JOIN FETCH u.company c " +
             "WHERE pm.project.id = :projectId")
     List<ProjectMember> findAllByProjectIdIncludeDeleted(@Param("projectId") Long projectId);
+
+    boolean existsByProjectIdAndUserId(Long projectId, Long userId);
 }

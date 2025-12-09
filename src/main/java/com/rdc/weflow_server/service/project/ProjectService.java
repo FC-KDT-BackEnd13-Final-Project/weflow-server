@@ -10,6 +10,7 @@ import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,15 +23,33 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
 
-    // 내 프로젝트 조회
     public List<ProjectSummaryResponse> getMyProjects(CustomUserDetails user) {
 
-        // 1) 유저가 속한 모든 프로젝트 목록 조회
-        List<ProjectMember> memberships =
-                projectMemberRepository.findActiveMembershipsByUserIdOrderByProjectCreatedDesc(user.getId());
+        UserRole role = user.getRole();
 
-        // 2) 프로젝트 정보로 매핑
-        return memberships.stream()
+        List<Project> projects;
+
+        switch (role) {
+
+            case SYSTEM_ADMIN -> {
+                // 전체 프로젝트 조회
+                projects = projectRepository.findAllActiveProjects();
+            }
+
+            case AGENCY -> {
+                // 전체 프로젝트 조회 (볼 수 있음)
+                projects = projectRepository.findAllActiveProjects();
+            }
+
+            case CLIENT -> {
+                // 본인 프로젝트만 조회
+                projects = projectRepository.findActiveProjectsByUser(user.getId());
+            }
+
+            default -> throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        return projects.stream()
                 .map(ProjectSummaryResponse::from)
                 .toList();
     }
@@ -38,9 +57,25 @@ public class ProjectService {
     // 프로젝트 상세 조회
     public ProjectDetailResponse getProjectDetails(Long projectId, CustomUserDetails user) {
 
-        // 해당 프로젝트의 active 멤버인지 확인
-        projectMemberRepository.findActiveByProjectIdAndUserId(projectId, user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NO_PROJECT_PERMISSION));
+        UserRole role = user.getRole();
+
+        // SYSTEM_ADMIN → 바로 접근 허용
+        if (role == UserRole.SYSTEM_ADMIN) {
+            Project project = projectRepository.findByIdWithMembersFiltered(projectId, false)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
+            return ProjectDetailResponse.from(project);
+        }
+
+        // CLIENT / AGENCY (멤버 여부 체크)
+        boolean isMember = projectMemberRepository
+                .existsByProjectIdAndUserId(projectId, user.getId());
+
+        if (!isMember) {
+
+            if ((role == UserRole.CLIENT) || (role == UserRole.AGENCY)) {
+                throw new BusinessException(ErrorCode.NO_PROJECT_PERMISSION);
+            }
+        }
 
         Project project = projectRepository.findByIdWithMembersFiltered(projectId, false)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));

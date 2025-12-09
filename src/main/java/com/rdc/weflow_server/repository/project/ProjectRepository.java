@@ -27,10 +27,20 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, Project
             @Param("projectId") Long projectId,
             @Param("includeDeleted") boolean includeDeleted);
 
+    // 1) 모든 프로젝트 조회 (관리자 / 개발사용)
+    @Query("select p from Project p where p.deletedAt is null order by p.createdAt desc")
+    List<Project> findAllActiveProjects();
 
-    // 🔥 SYSTEM_ADMIN 전체 조회용 추가
+    // 2) 고객사: 본인 프로젝트만 조회
+    @Query("select pm.project from ProjectMember pm " +
+            "where pm.user.id = :userId and pm.deletedAt is null and pm.project.deletedAt is null " +
+            "order by pm.project.createdAt desc")
+    List<Project> findActiveProjectsByUser(@Param("userId") Long userId);
+
     @Query("select p from Project p " +
-            "where (p.deletedAt is null or :includeDeleted = true) " +
+            "join p.projectMembers pm " +
+            "where pm.user.id = :userId " +
+            "and pm.deletedAt is null and p.deletedAt is null " +
             "order by p.createdAt desc")
-    List<Project> findAllProjectsFiltered(@Param("includeDeleted") boolean includeDeleted);
+    List<Project> findActiveProjectsByUserOrderByCreatedDesc(@Param("userId") Long userId);
 }

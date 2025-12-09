@@ -2,6 +2,7 @@ package com.rdc.weflow_server.entity.checklist;
 
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.step.Step;
+import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -49,6 +50,10 @@ public class Checklist extends BaseEntity {
     @OneToMany(mappedBy = "checklist", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ChecklistQuestion> questions = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
 
     // 체크리스트 수정
     public void updateChecklist(String title, String description) {

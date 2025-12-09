@@ -27,6 +27,9 @@ public class ChecklistDetailResponse {
 
     private List<QuestionResponse> questions;
 
+    private Long createdById;
+    private String createdByName;
+
     public static ChecklistDetailResponse from(Checklist checklist, List<QuestionResponse> questions) {
         return ChecklistDetailResponse.builder()
                 .checklistId(checklist.getId())
@@ -39,6 +42,8 @@ public class ChecklistDetailResponse {
                 .createdAt(checklist.getCreatedAt())
                 .updatedAt(checklist.getUpdatedAt())
                 .questions(questions)
+                .createdById(checklist.getCreatedBy().getId())
+                .createdByName(checklist.getCreatedBy().getName())
                 .build();
     }
 }

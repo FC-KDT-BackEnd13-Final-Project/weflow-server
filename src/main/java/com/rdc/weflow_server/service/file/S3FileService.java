@@ -55,10 +55,11 @@ public class S3FileService {
         );
     }
 
-    public String generateDownloadPresignedUrl(String key) {
+    public String generateDownloadPresignedUrl(String key, String fileName) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
+                .responseContentDisposition("attachment; filename=\"" + fileName + "\"")
                 .build();
 
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()

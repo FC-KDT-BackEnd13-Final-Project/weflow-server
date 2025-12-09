@@ -14,11 +14,11 @@ public class AttachmentResponse {
     private Attachment.TargetType targetType;
     private Long targetId;
     private Attachment.AttachmentType attachmentType;
-    private String filePath;
+    private String filePath; // 첨부 파일의 경로
     private String fileName;
     private Long fileSize;
     private String contentType;
-    private String url;
+    private String url; // 첨부 link의 url
     private LocalDateTime createdAt;
 
     public static AttachmentResponse from(Attachment attachment) {

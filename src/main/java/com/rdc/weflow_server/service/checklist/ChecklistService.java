@@ -61,6 +61,7 @@ public class ChecklistService {
                 .isTemplate(false)
                 .isLocked(false)
                 .step(step)
+                .createdBy(user)
                 .build();
         checklistRepository.save(checklist);
 
@@ -168,6 +169,10 @@ public class ChecklistService {
             throw new BusinessException(ErrorCode.CHECKLIST_LOCKED);
         }
 
+        if (!checklist.getCreatedBy().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
         // 제목/설명 먼저 수정
         checklist.updateChecklist(
                 request.getTitle(),
@@ -211,6 +216,10 @@ public class ChecklistService {
         // 잠긴 체크리스트는 삭제 불가
         if (checklist.getIsLocked()) {
             throw new BusinessException(ErrorCode.CHECKLIST_LOCKED);
+        }
+
+        if (!checklist.getCreatedBy().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         Long projectId = checklist.getStep().getProject().getId();

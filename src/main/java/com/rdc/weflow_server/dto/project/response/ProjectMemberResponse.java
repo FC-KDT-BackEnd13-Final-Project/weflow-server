@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ProjectMemberResponse {
 
-    private Long memberId;      // project_member ID
+    private Long projectMemberId;      // project_member ID
     private Long userId;
     private String name;
     private String email;
@@ -23,7 +23,7 @@ public class ProjectMemberResponse {
 
     public static ProjectMemberResponse from(ProjectMember pm) {
         return ProjectMemberResponse.builder()
-                .memberId(pm.getId())
+                .projectMemberId(pm.getId())
                 .userId(pm.getUser().getId())
                 .name(pm.getUser().getName())
                 .email(pm.getUser().getEmail())

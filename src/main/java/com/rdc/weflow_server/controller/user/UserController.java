@@ -6,6 +6,7 @@ import com.rdc.weflow_server.dto.user.request.ChangePasswordRequest;
 import com.rdc.weflow_server.dto.user.request.UpdateUserRequest;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
 import com.rdc.weflow_server.service.user.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -43,10 +44,15 @@ public class UserController {
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateMyInfo(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody UpdateUserRequest request
+            @RequestBody UpdateUserRequest request,
+            HttpServletRequest servletRequest
     ) {
-        // 1. Service 호출 (ID와 수정할 데이터 전달)
-        UserResponse response = userService.updateMyInfo(userDetails.getId(), request);
+        // 1. Service 호출 (ID와 수정할 데이터, IP 전달)
+        UserResponse response = userService.updateMyInfo(
+                userDetails.getId(),
+                request,
+                servletRequest.getRemoteAddr()
+        );
 
         // 2. 응답 반환
         return ResponseEntity.ok(
@@ -61,10 +67,15 @@ public class UserController {
     @PatchMapping("/me/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid ChangePasswordRequest request
+            @RequestBody @Valid ChangePasswordRequest request,
+            HttpServletRequest servletRequest
     ) {
-        // 1. Service 호출
-        userService.changePassword(userDetails.getId(), request);
+        // 1. Service 호출 (IP 전달)
+        userService.changePassword(
+                userDetails.getId(),
+                request,
+                servletRequest.getRemoteAddr()
+        );
 
         // 2. 응답 반환 (성공 시 데이터 없음)
         return ResponseEntity.ok(

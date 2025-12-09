@@ -5,9 +5,12 @@ import com.rdc.weflow_server.dto.company.request.CreateCompanyRequest;
 import com.rdc.weflow_server.dto.company.request.UpdateCompanyRequest;
 import com.rdc.weflow_server.dto.company.response.CompanyResponse;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.log.ActionType;
+import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.company.CompanyRepository;
+import com.rdc.weflow_server.service.log.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,13 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final ActivityLogService activityLogService;
 
     /**
      * 관리자 - 회사 생성
      * POST /api/admin/companies
      */
     @Transactional
-    public CompanyResponse createCompany(CreateCompanyRequest request) {
+    public CompanyResponse createCompany(CreateCompanyRequest request, Long adminId, String ipAddress) {
         // 1. 사업자번호 중복 체크 (입력값이 있을 때만)
         if (request.getBusinessNumber() != null &&
                 companyRepository.existsByBusinessNumber(request.getBusinessNumber())) {
@@ -43,7 +47,17 @@ public class CompanyService {
         Company company = request.toEntity();
         Company savedCompany = companyRepository.save(company);
 
-        // 4. Entity -> Response DTO 변환하여 반환
+        // 4. 로그 기록
+        activityLogService.createLog(
+                ActionType.CREATE,
+                TargetTable.COMPANY,
+                savedCompany.getId(),
+                adminId,
+                null,
+                ipAddress
+        );
+
+        // 5. Entity -> Response DTO 변환하여 반환
         return CompanyResponse.from(savedCompany);
     }
 
@@ -91,7 +105,7 @@ public class CompanyService {
      * PATCH /api/admin/companies/{companyId}
      */
     @Transactional
-    public CompanyResponse updateCompany(Long companyId, UpdateCompanyRequest request) {
+    public CompanyResponse updateCompany(Long companyId, UpdateCompanyRequest request, Long adminId, String ipAddress) {
         // 1. 대상 회사 조회
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
@@ -112,7 +126,17 @@ public class CompanyService {
                 request.getStatus()
         );
 
-        // 4. 변경된 정보 반환
+        // 4. 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.COMPANY,
+                company.getId(),
+                adminId,
+                null,
+                ipAddress
+        );
+
+        // 5. 변경된 정보 반환
         return CompanyResponse.from(company);
     }
 
@@ -121,7 +145,7 @@ public class CompanyService {
      * DELETE /api/admin/companies/{companyId}
      */
     @Transactional
-    public void deleteCompany(Long companyId) {
+    public void deleteCompany(Long companyId, Long adminId, String ipAddress) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
 
@@ -132,5 +156,15 @@ public class CompanyService {
 
         // Soft Delete 수행
         company.delete();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.DELETE,
+                TargetTable.COMPANY,
+                company.getId(),
+                adminId,
+                null,
+                ipAddress
+        );
     }
 }

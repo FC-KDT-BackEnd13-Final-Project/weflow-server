@@ -19,6 +19,8 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.entity.notification.NotificationType;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
@@ -47,6 +49,7 @@ public class StepRequestService {
     private final AttachmentRepository attachmentRepository;
     private final ActivityLogService activityLogService;
     private final S3FileService s3FileService;
+    private final NotificationService notificationService;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
@@ -100,6 +103,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), stepRequest.getRequestTitle());
         return toResponse(saved);
     }
 
@@ -155,17 +159,7 @@ public class StepRequestService {
             replaceLinks(stepRequest, request.getLinks(), ctx);
         }
 
-        StepRequestStatus beforeStatus = stepRequest.getStatus();
-        // 변경 요청(CHANGE_REQUESTED) 상태에서 수정하면 재제출로 간주하여 상태를 REQUESTED로 환원
-        if (beforeStatus == StepRequestStatus.CHANGE_REQUESTED) {
-            stepRequest.updateStatus(StepRequestStatus.REQUESTED);
-            stepRequest.updateDecidedAt(null);
-            stepRequest.updateDecidedBy(null);
-            saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "status", beforeStatus.name(), StepRequestStatus.REQUESTED.name(), user);
-            refreshStepStatus(step);
-        }
-
-        // 수정 이력 기록 (내용 변경)
+        // 수정 이력 기록
         saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "request", null, toRequestContent(request.getTitle(), request.getDescription()), user);
 
         activityLogService.createLog(
@@ -176,6 +170,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), stepRequest.getRequestTitle());
         return toResponse(stepRequest);
     }
 
@@ -185,7 +180,10 @@ public class StepRequestService {
         stepService.getStepOrThrow(stepId);
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId, pageable);
-        List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
+        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
+                .stream()
+                .map(this::toSummary)
+                .collect(Collectors.toList());
 
         return StepRequestListResponse.builder()
                 .totalCount(pageResult.getTotalElements())
@@ -200,7 +198,10 @@ public class StepRequestService {
         // 정책: 삭제된 Step에 속한 Request도 프로젝트 히스토리로 조회 가능
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId, pageable);
-        List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
+        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
+                .stream()
+                .map(this::toSummary)
+                .collect(Collectors.toList());
 
         return StepRequestListResponse.builder()
                 .totalCount(pageResult.getTotalElements())
@@ -248,6 +249,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), "승인 요청이 취소되었습니다.");
     }
 
     private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds, AuditContext ctx) {
@@ -386,6 +388,7 @@ public class StepRequestService {
     }
 
     private StepRequestSummaryResponse toSummary(StepRequest stepRequest) {
+        boolean hasAttachment = hasAttachment(stepRequest);
         return StepRequestSummaryResponse.builder()
                 .id(stepRequest.getId())
                 .title(stepRequest.getRequestTitle())
@@ -396,14 +399,8 @@ public class StepRequestService {
                 .stepTitle(stepRequest.getStep() != null ? stepRequest.getStep().getTitle() : null)
                 .requestedBy(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getId() : null)
                 .requestedByName(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getName() : null)
-                .hasAttachment(hasAttachment(stepRequest))
+                .hasAttachment(hasAttachment)
                 .build();
-    }
-
-    private List<StepRequestSummaryResponse> toSummaries(List<StepRequest> requests) {
-        return requests.stream()
-                .map(this::toSummary)
-                .collect(Collectors.toList());
     }
 
     private List<AttachmentSimpleResponse> getAttachments(StepRequest stepRequest) {
@@ -450,6 +447,29 @@ public class StepRequestService {
                 .updatedBy(updatedBy)
                 .build();
         stepRequestHistoryRepository.save(history);
+    }
+
+    private void notifyClients(StepRequest stepRequest, NotificationType type, String title, String message) {
+        if (stepRequest == null || stepRequest.getStep() == null || stepRequest.getStep().getProject() == null) {
+            return;
+        }
+        List<User> receivers = projectMemberRepository.findByProjectIdAndDeletedAtIsNull(stepRequest.getStep().getProject().getId())
+                .stream()
+                .map(pm -> pm.getUser())
+                .filter(u -> u != null && u.getRole() == UserRole.CLIENT)
+                .toList();
+
+        receivers.forEach(receiver ->
+                notificationService.send(
+                        receiver,
+                        type,
+                        String.format("승인요청 - %s", title),
+                        message,
+                        stepRequest.getStep().getProject(),
+                        null,
+                        stepRequest
+                )
+        );
     }
 
     public void refreshStepStatus(Step step) {

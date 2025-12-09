@@ -1,11 +1,13 @@
 package com.rdc.weflow_server.controller.user;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.user.request.CreateUserRequest;
 import com.rdc.weflow_server.dto.user.request.UpdateUserAdminRequest;
 import com.rdc.weflow_server.dto.user.request.UserSearchCondition;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
 import com.rdc.weflow_server.service.user.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,9 +33,15 @@ public class AdminUserController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> createUser(
-            @Valid @RequestBody CreateUserRequest request) {
+            @Valid @RequestBody CreateUserRequest request,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest) {
 
-        UserResponse response = userService.createUser(request);
+        UserResponse response = userService.createUser(
+                request,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회원이 성공적으로 생성되었습니다.", response));
     }
@@ -43,9 +52,15 @@ public class AdminUserController {
      */
     @PostMapping("/batch")
     public ResponseEntity<ApiResponse<List<UserResponse>>> createUsersBatch(
-            @RequestBody @Valid List<CreateUserRequest> requests
+            @RequestBody @Valid List<CreateUserRequest> requests,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        List<UserResponse> response = userService.createUsersBatch(requests);
+        List<UserResponse> response = userService.createUsersBatch(
+                requests,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회원 일괄 생성 성공", response));
     }
@@ -74,9 +89,16 @@ public class AdminUserController {
     @PatchMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long userId,
-            @RequestBody @Valid UpdateUserAdminRequest request
+            @RequestBody @Valid UpdateUserAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        UserResponse response = userService.updateUser(userId, request);
+        UserResponse response = userService.updateUser(
+                userId,
+                request,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.ok(ApiResponse.success("회원 정보 수정 성공", response));
     }
 
@@ -85,8 +107,16 @@ public class AdminUserController {
      * DELETE /api/admin/users/{userId}
      */
     @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long userId) {
-        userService.deleteUser(userId);
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
+    ) {
+        userService.deleteUser(
+                userId,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.ok(ApiResponse.success("회원 삭제 성공", null));
     }
 }

@@ -1,11 +1,13 @@
 package com.rdc.weflow_server.controller.company;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.company.request.CompanySearchCondition;
 import com.rdc.weflow_server.dto.company.request.CreateCompanyRequest;
 import com.rdc.weflow_server.dto.company.request.UpdateCompanyRequest;
 import com.rdc.weflow_server.dto.company.response.CompanyResponse;
 import com.rdc.weflow_server.service.company.CompanyService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,9 +32,15 @@ public class AdminCompanyController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(
-            @Valid @RequestBody CreateCompanyRequest request) {
+            @Valid @RequestBody CreateCompanyRequest request,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest) {
 
-        CompanyResponse response = companyService.createCompany(request);
+        CompanyResponse response = companyService.createCompany(
+                request,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회사가 성공적으로 생성되었습니다.", response));
     }
@@ -66,9 +75,16 @@ public class AdminCompanyController {
     @PatchMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyResponse>> updateCompany(
             @PathVariable Long companyId,
-            @RequestBody @Valid UpdateCompanyRequest request
+            @RequestBody @Valid UpdateCompanyRequest request,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
     ) {
-        CompanyResponse response = companyService.updateCompany(companyId, request);
+        CompanyResponse response = companyService.updateCompany(
+                companyId,
+                request,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.ok(ApiResponse.success("회사 정보 수정 성공", response));
     }
 
@@ -77,8 +93,16 @@ public class AdminCompanyController {
      * DELETE /api/admin/companies/{companyId}
      */
     @DeleteMapping("/{companyId}")
-    public ResponseEntity<ApiResponse<Void>> deleteCompany(@PathVariable Long companyId) {
-        companyService.deleteCompany(companyId);
+    public ResponseEntity<ApiResponse<Void>> deleteCompany(
+            @PathVariable Long companyId,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
+    ) {
+        companyService.deleteCompany(
+                companyId,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
         return ResponseEntity.ok(ApiResponse.success("회사 삭제 성공", null));
     }
 }

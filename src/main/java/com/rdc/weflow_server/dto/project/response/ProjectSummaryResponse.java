@@ -18,12 +18,14 @@ public class ProjectSummaryResponse {
     private Long projectId;
     private String name;
     private ProjectStatus status;
+    private String customerCompanyName;
 
     public static ProjectSummaryResponse from(Project p) {
         return ProjectSummaryResponse.builder()
                 .projectId(p.getId())
                 .name(p.getName())
                 .status(p.getStatus())
+                .customerCompanyName(p.getCompany().getName())
                 .build();
     }
 }

@@ -5,17 +5,19 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long>, ProjectRepositoryCustom {
 
+    // 상세 조회 (멤버 포함)
     @Query("select p from Project p " +
             "left join fetch p.projectMembers pm " +
             "left join fetch pm.user " +
             "where p.id = :projectId")
     Optional<Project> findByIdWithMembers(@Param("projectId") Long projectId);
 
-    // 삭제 조건 포함
+    // 상세 조회 (삭제 포함 옵션)
     @Query("select p from Project p " +
             "left join fetch p.projectMembers pm " +
             "left join fetch pm.user " +
@@ -24,4 +26,11 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, Project
     Optional<Project> findByIdWithMembersFiltered(
             @Param("projectId") Long projectId,
             @Param("includeDeleted") boolean includeDeleted);
+
+
+    // 🔥 SYSTEM_ADMIN 전체 조회용 추가
+    @Query("select p from Project p " +
+            "where (p.deletedAt is null or :includeDeleted = true) " +
+            "order by p.createdAt desc")
+    List<Project> findAllProjectsFiltered(@Param("includeDeleted") boolean includeDeleted);
 }

@@ -20,6 +20,7 @@ public class ProjectMemberResponse {
     private String projectRole;   // ADMIN / MEMBER
 
     private LocalDateTime joinedAt;
+    private LocalDateTime removedAt;
 
     public static ProjectMemberResponse from(ProjectMember pm) {
         return ProjectMemberResponse.builder()
@@ -31,6 +32,7 @@ public class ProjectMemberResponse {
                 .userRole(pm.getUser().getRole().name())
                 .projectRole(pm.getRole().name())
                 .joinedAt(pm.getCreatedAt())
+                .removedAt(pm.getDeletedAt())
                 .build();
     }
 }

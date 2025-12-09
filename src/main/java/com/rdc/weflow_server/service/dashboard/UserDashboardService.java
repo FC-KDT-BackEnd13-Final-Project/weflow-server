@@ -40,14 +40,14 @@ public class UserDashboardService {
 
         // 2) 진행 중인 프로젝트 수
         long inProgressProjectCount =
-                projectMemberRepository.countByUserIdAndProject_Status(
+                projectMemberRepository.countActiveMembershipByUserIdAndProjectStatus(
                         userId,
                         ProjectStatus.IN_PROGRESS
                 );
 
         // 3) 최근 등록된 프로젝트 Top 5
         List<ProjectMember> recentFiveMemberships =
-                projectMemberRepository.findTop5ByUserIdOrderByProject_CreatedAtDesc(userId);
+                projectMemberRepository.findActiveMembershipsByUserIdOrderByProjectCreatedDesc(userId);
 
         List<ProjectSummaryResponse> importantProjects =
                 recentFiveMemberships.stream()
@@ -73,9 +73,7 @@ public class UserDashboardService {
         if (userRole == UserRole.CLIENT) {
 
             // 해당 클라이언트가 속한 프로젝트 목록
-            List<Long> projectIds =
-                    projectMemberRepository.findByUserId(userId)
-                            .stream()
+            List<Long> projectIds = recentFiveMemberships.stream()
                             .map(pm -> pm.getProject().getId())
                             .toList();
 

@@ -235,7 +235,7 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
         }
 
-        boolean hasPosts = postRepository.existsByStepId(stepId);
+        boolean hasPosts = postRepository.existsByStepIdAndDeletedAtIsNull(stepId);
         boolean hasRequests = stepRequestRepository.existsByStep_Id(stepId);
         boolean hasChecklists = checklistRepository.existsByStep_Id(stepId);
 

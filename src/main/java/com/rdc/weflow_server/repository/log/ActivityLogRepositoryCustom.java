@@ -5,6 +5,7 @@ import com.rdc.weflow_server.dto.log.ActivityLogStatisticsDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ActivityLogRepositoryCustom {
@@ -14,6 +15,8 @@ public interface ActivityLogRepositoryCustom {
             String targetTable,
             Long userId,
             Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             Pageable pageable
     );
 
@@ -30,6 +33,8 @@ public interface ActivityLogRepositoryCustom {
 
     Page<ActivityLogResponseDto> searchByProject(
             Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             Pageable pageable
     );
     ActivityLogStatisticsDto getStatistics(); // 로그 통계 조회
@@ -42,4 +47,5 @@ public interface ActivityLogRepositoryCustom {
             String startDate,
             String endDate
     );
+    List<ActivityLogResponseDto> findRecentLogs(int limit); // 최근 로그 5개
 }

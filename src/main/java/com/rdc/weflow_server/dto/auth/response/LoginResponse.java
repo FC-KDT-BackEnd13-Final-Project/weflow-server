@@ -23,6 +23,7 @@ public class LoginResponse {
         private String email;
         private String name;
         private UserRole role;
+        private Boolean isTemporaryPassword;
     }
 
     /**
@@ -37,6 +38,7 @@ public class LoginResponse {
                         .email(user.getEmail())
                         .name(user.getName())
                         .role(user.getRole())
+                        .isTemporaryPassword(user.getIsTemporaryPassword())
                         .build())
                 .build();
     }

@@ -15,4 +15,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 삭제되지 않은 알림 목록 조회 (전체 삭제용)
     List<Notification> findByUserIdAndDeletedAtIsNull(Long userId);
+
+    long countByUserIdAndIsReadFalse(Long userId);
+    List<Notification> findTop5ByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 }

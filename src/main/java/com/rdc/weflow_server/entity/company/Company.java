@@ -41,11 +41,23 @@ public class Company extends BaseEntity {
     private CompanyStatus status;
 
     // 회사 정보 수정 메서드
-    public void updateCompany(String name, String representative, String address, String memo, CompanyStatus status) {
+    public void updateCompany(String name, String businessNumber, String representative, String email, String address, String memo, CompanyStatus status) {
         if (name != null) this.name = name;
+        if (businessNumber != null) this.businessNumber = businessNumber;
         if (representative != null) this.representative = representative;
+        if (email != null) this.email = email;
         if (address != null) this.address = address;
         if (memo != null) this.memo = memo;
         if (status != null) this.status = status;
+    }
+
+    /**
+     * [관리자] 회사 삭제 처리
+     * - Soft Delete (삭제 시간 기록)
+     * - 상태를 INACTIVE(비활성)로 변경
+     */
+    public void delete() {
+        this.softDelete(); // BaseEntity의 메서드
+        this.status = CompanyStatus.INACTIVE; // 상태 변경
     }
 }

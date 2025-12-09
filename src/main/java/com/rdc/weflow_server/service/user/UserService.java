@@ -205,6 +205,6 @@ public class UserService {
         }
 
         // Soft Delete 수행
-        user.softDelete();
+        user.delete();
     }
 }

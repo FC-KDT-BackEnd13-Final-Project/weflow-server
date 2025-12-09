@@ -1,6 +1,8 @@
 package com.rdc.weflow_server.repository.project;
 
 import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectRole;
+import com.rdc.weflow_server.entity.project.ProjectStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -59,4 +61,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
             @Param("projectId") Long projectId,
             @Param("userId") Long userId
     );
+
+    List<ProjectMember> findTop5ByUserIdOrderByProject_CreatedAtDesc(Long userId);
+    long countByUserIdAndProject_Status(Long userId, ProjectStatus status);
 }

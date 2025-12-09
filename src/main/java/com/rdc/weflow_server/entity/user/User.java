@@ -87,4 +87,14 @@ public class User extends BaseEntity {
         if (status != null) this.status = status;
         if (company != null) this.company = company;
     }
+
+    /**
+     * [관리자] 회원 삭제
+     * - Soft Delete (삭제 시간 기록)
+     * - 상태를 DELETED로 변경
+     */
+    public void delete() {
+        this.softDelete(); // BaseEntity의 메서드 호출
+        this.status = UserStatus.DELETED; // 상태 변경
+    }
 }

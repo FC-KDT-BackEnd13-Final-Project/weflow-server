@@ -104,7 +104,9 @@ public class CompanyService {
         // 3. 엔티티의 수정 메서드 호출
         company.updateCompany(
                 request.getName(),
+                request.getBusinessNumber(),
                 request.getRepresentative(),
+                request.getEmail(),
                 request.getAddress(),
                 request.getMemo(),
                 request.getStatus()
@@ -129,6 +131,6 @@ public class CompanyService {
         }
 
         // Soft Delete 수행
-        company.softDelete();
+        company.delete();
     }
 }

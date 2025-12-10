@@ -8,14 +8,14 @@ import lombok.Getter;
 @Builder
 public class ProjectRoleUpdateResponse {
 
-    private Long memberId;
+    private Long projectMemberId;
     private Long userId;
     private String name;
     private String newRole;
 
     public static ProjectRoleUpdateResponse from(ProjectMember pm) {
         return ProjectRoleUpdateResponse.builder()
-                .memberId(pm.getId())
+                .projectMemberId(pm.getId())
                 .userId(pm.getUser().getId())
                 .name(pm.getUser().getName())
                 .newRole(pm.getRole().name())

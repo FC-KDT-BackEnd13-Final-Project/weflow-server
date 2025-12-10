@@ -18,16 +18,14 @@ public class ProjectSummaryResponse {
     private Long projectId;
     private String name;
     private ProjectStatus status;
-    private ProjectRole projectRole;
+    private String customerCompanyName;
 
-    public static ProjectSummaryResponse from(ProjectMember pm) {
-        Project p = pm.getProject();
-
+    public static ProjectSummaryResponse from(Project p) {
         return ProjectSummaryResponse.builder()
                 .projectId(p.getId())
                 .name(p.getName())
                 .status(p.getStatus())
-                .projectRole(pm.getRole())
+                .customerCompanyName(p.getCompany().getName())
                 .build();
     }
 }

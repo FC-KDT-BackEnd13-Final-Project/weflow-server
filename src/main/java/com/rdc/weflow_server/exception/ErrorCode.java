@@ -14,6 +14,7 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_004", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_005", "권한이 없습니다."),
     FORBIDDEN_PROJECT_ACCESS(HttpStatus.FORBIDDEN, "COMMON_006","프로젝트에 접근할 권한이 없습니다."),
+    PERMISSION_REQUEST_REQUIRED(HttpStatus.FORBIDDEN, "ACCESS_REQUEST_REQUIRED", "관리자 승인 요청이 필요합니다."),
 
     // Post
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_001", "게시글을 찾을 수 없습니다."),
@@ -89,6 +90,7 @@ public enum ErrorCode {
     CANNOT_DOWNGRADE_SELF(HttpStatus.FORBIDDEN, "PROJECT_MEMBER_008", "자기 자신을 MEMBER로 강등할 수 없습니다."),
     INVALID_PROJECT_ROLE(HttpStatus.BAD_REQUEST, "PROJECT_MEMBER_009", "유효하지 않은 프로젝트 역할 값입니다."),
     PROJECT_MEMBER_ROLE_FORBIDDEN(HttpStatus.FORBIDDEN, "PROJECT_MEMBER_010", "프로젝트 역할을 변경할 권한이 없습니다."),
+    CANNOT_REMOVE_SELF(HttpStatus.FORBIDDEN, "PROJECT_MEMBER_011", "자기 자신을 삭제할 수 없습니다."),
 
     // Checklist
     CHECKLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "CHECKLIST_001", "체크리스트를 찾을 수 없습니다."),

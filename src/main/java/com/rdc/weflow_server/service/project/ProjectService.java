@@ -10,6 +10,7 @@ import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
+import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,17 +23,33 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
 
-    // 내 프로젝트 조회
     public List<ProjectSummaryResponse> getMyProjects(CustomUserDetails user) {
 
-        boolean includeDeleted = user.getRole() == UserRole.SYSTEM_ADMIN;
+        UserRole role = user.getRole();
 
-        // 1) 유저가 속한 모든 프로젝트 목록 조회
-        List<ProjectMember> memberships =
-                projectMemberRepository.findByUserIdFiltered(user.getId(), includeDeleted);
+        List<Project> projects;
 
-        // 2) 프로젝트 정보로 매핑
-        return memberships.stream()
+        switch (role) {
+
+            case SYSTEM_ADMIN -> {
+                // 전체 프로젝트 조회
+                projects = projectRepository.findAllActiveProjects();
+            }
+
+            case AGENCY -> {
+                // 전체 프로젝트 조회 (볼 수 있음)
+                projects = projectRepository.findAllActiveProjects();
+            }
+
+            case CLIENT -> {
+                // 본인 프로젝트만 조회
+                projects = projectRepository.findActiveProjectsByUser(user.getId());
+            }
+
+            default -> throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        return projects.stream()
                 .map(ProjectSummaryResponse::from)
                 .toList();
     }
@@ -40,28 +57,29 @@ public class ProjectService {
     // 프로젝트 상세 조회
     public ProjectDetailResponse getProjectDetails(Long projectId, CustomUserDetails user) {
 
-        boolean includeDeleted = user.getRole() == UserRole.SYSTEM_ADMIN;
+        UserRole role = user.getRole();
 
-        // 권한 체크 (해당 프로젝트의 멤버인지 확인)
-        checkProjectAccess(projectId, user);
+        // SYSTEM_ADMIN → 바로 접근 허용
+        if (role == UserRole.SYSTEM_ADMIN) {
+            Project project = projectRepository.findByIdWithMembersFiltered(projectId, false)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
+            return ProjectDetailResponse.from(project);
+        }
 
-        Project project = projectRepository.findByIdWithMembersFiltered(projectId, includeDeleted)
+        // CLIENT / AGENCY (멤버 여부 체크)
+        boolean isMember = projectMemberRepository
+                .existsByProjectIdAndUserId(projectId, user.getId());
+
+        if (!isMember) {
+
+            if ((role == UserRole.CLIENT) || (role == UserRole.AGENCY)) {
+                throw new BusinessException(ErrorCode.NO_PROJECT_PERMISSION);
+            }
+        }
+
+        Project project = projectRepository.findByIdWithMembersFiltered(projectId, false)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
         return ProjectDetailResponse.from(project);
-    }
-
-    // 공통 권한 체크 메서드
-    private void checkProjectAccess(Long projectId, CustomUserDetails user) {
-
-        // 시스템 관리자면 무조건 허용
-        if (user.getRole() == UserRole.SYSTEM_ADMIN) return;
-
-        boolean isMember =
-                projectMemberRepository.existsByProjectIdAndUserId(projectId, user.getId());
-
-        if (!isMember) {
-            throw new BusinessException(ErrorCode.NO_PROJECT_PERMISSION);
-        }
     }
 }

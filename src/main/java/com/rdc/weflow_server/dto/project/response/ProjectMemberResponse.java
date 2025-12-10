@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ProjectMemberResponse {
 
-    private Long memberId;      // project_member ID
+    private Long projectMemberId;      // project_member ID
     private Long userId;
     private String name;
     private String email;
@@ -20,10 +20,11 @@ public class ProjectMemberResponse {
     private String projectRole;   // ADMIN / MEMBER
 
     private LocalDateTime joinedAt;
+    private LocalDateTime removedAt;
 
     public static ProjectMemberResponse from(ProjectMember pm) {
         return ProjectMemberResponse.builder()
-                .memberId(pm.getId())
+                .projectMemberId(pm.getId())
                 .userId(pm.getUser().getId())
                 .name(pm.getUser().getName())
                 .email(pm.getUser().getEmail())
@@ -31,6 +32,7 @@ public class ProjectMemberResponse {
                 .userRole(pm.getUser().getRole().name())
                 .projectRole(pm.getRole().name())
                 .joinedAt(pm.getCreatedAt())
+                .removedAt(pm.getDeletedAt())
                 .build();
     }
 }

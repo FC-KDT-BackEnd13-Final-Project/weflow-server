@@ -326,7 +326,7 @@ public class AdminProjectService {
         validateAdmin(user);
 
         // 2) 프로젝트 존재 여부 확인
-        Project project = projectRepository.findById(projectId)
+        projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
         // 3) 멤버 목록 조회 (삭제된 멤버도 포함)

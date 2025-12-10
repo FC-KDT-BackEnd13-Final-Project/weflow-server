@@ -28,15 +28,15 @@ public class ProjectMemberService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
 
-    /** 프로젝트 멤버 조회 **/
+    /** 프로젝트 멤버 조회 (삭제된 멤버 제외) **/
     public List<ProjectMemberResponse> getProjectMembers(Long projectId, Long userId) {
 
         // 프로젝트 멤버인지 검증
         projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_PROJECT_ACCESS));
 
-        // 전체 멤버 반환
-        return projectMemberRepository.findAllByProjectId(projectId)
+        // 전체 멤버 반환 (삭제된 멤버 제외)
+        return projectMemberRepository.findActiveByProjectId(projectId)
                 .stream()
                 .map(ProjectMemberResponse::from)
                 .toList();
@@ -60,7 +60,7 @@ public class ProjectMemberService {
 
         // (2) 요청자 프로젝트 멤버 검증
         ProjectMember requester = projectMemberRepository
-                .findByProjectIdAndUserId(projectId, requesterId)
+                .findActiveByProjectIdAndUserId(projectId, requesterId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_PROJECT_ACCESS));
 
         // (3) 요청자의 프로젝트 Role 확인 → ADMIN만 가능
@@ -85,7 +85,8 @@ public class ProjectMemberService {
         }
 
         // (6) 스스로 MEMBER로 강등 금지
-        if (target.getUser().getId().equals(requesterId) && newRoleEnum == ProjectRole.MEMBER) {
+        if (target.getUser().getId().equals(requesterId)
+                && newRoleEnum == ProjectRole.MEMBER) {
             throw new BusinessException(ErrorCode.CANNOT_DOWNGRADE_SELF);
         }
 
@@ -146,7 +147,7 @@ public class ProjectMemberService {
 
         // (2) 요청자 프로젝트 멤버 검증
         ProjectMember requester = projectMemberRepository
-                .findByProjectIdAndUserId(projectId, requesterId)
+                .findActiveByProjectIdAndUserId(projectId, requesterId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_PROJECT_ACCESS));
 
         // (3) 프로젝트 내 ADMIN인지 확인
@@ -164,7 +165,7 @@ public class ProjectMemberService {
 
         // (5) 자기 자신 삭제 금지
         if (target.getUser().getId().equals(requesterId)) {
-            throw new BusinessException(ErrorCode.PROJECT_MEMBER_REMOVE_FORBIDDEN);
+            throw new BusinessException(ErrorCode.CANNOT_REMOVE_SELF);
         }
 
         // (6) Soft delete 적용

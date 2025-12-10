@@ -14,6 +14,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Service
@@ -51,10 +53,14 @@ public class S3FileService {
     }
 
     public String generateDownloadPresignedUrl(String key, String fileName) {
+        // UTF-8 인코딩하여 한글 파일명 지원 (RFC 2231)
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
-                .responseContentDisposition("attachment; filename=\"" + fileName + "\"")
+                .responseContentDisposition("attachment; filename*=UTF-8''" + encodedFileName)
                 .build();
 
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()

@@ -253,7 +253,8 @@ public class CommentService {
         }
 
         // AGENCY, CLIENT는 프로젝트 멤버인 경우만 접근 가능
-        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(projectId, currentUser.getId());
+        boolean isMember = projectMemberRepository.findActiveByProjectIdAndUserId(projectId, currentUser.getId()).isPresent();
+        ;
         if (!isMember) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }

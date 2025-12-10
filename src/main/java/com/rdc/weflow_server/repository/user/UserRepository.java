@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.repository.user;
 
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -21,4 +22,10 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
 
     // 전화번호 중복 체크
     boolean existsByPhoneNumber(String phoneNumber);
+
+    // 관리자 계정 CRUD용
+    List<User> findAllByRole(UserRole role);
+
+    // 관리자 최소 1명 유지
+    long countByRole(UserRole role);
 }

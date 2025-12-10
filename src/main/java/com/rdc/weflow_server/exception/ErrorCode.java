@@ -42,6 +42,7 @@ public enum ErrorCode {
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "USER_004", "현재 비밀번호가 일치하지 않습니다."),
     PASSWORD_NOT_MATCH(HttpStatus.BAD_REQUEST, "USER_005", "새 비밀번호와 비밀번호 확인이 일치하지 않습니다."),
     USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_006", "이미 삭제된 회원입니다."),
+    SYSTEM_ADMIN_MINIMUM_REQUIRED(HttpStatus.FORBIDDEN, "USER_007", "최소 1명 이상의 시스템 관리자가 필요합니다."),
 
     // Auth
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_001", "이메일 또는 비밀번호가 일치하지 않습니다."),

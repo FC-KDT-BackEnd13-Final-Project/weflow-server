@@ -45,8 +45,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/error").permitAll()
 
                         // 2. 관리자만 접근 가능
-                        //.requestMatchers("/api/admin/**").hasRole("SYSTEM_ADMIN")
-                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("SYSTEM_ADMIN")
+                        //.requestMatchers("/api/**").permitAll()
 
                         .requestMatchers(
                                 "/swagger-ui/**",

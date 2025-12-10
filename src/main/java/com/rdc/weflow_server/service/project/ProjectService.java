@@ -2,6 +2,7 @@ package com.rdc.weflow_server.service.project;
 
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.project.response.ProjectDetailResponse;
+import com.rdc.weflow_server.dto.project.response.ProjectListResponse;
 import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
@@ -13,45 +14,34 @@ import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
 
-    public List<ProjectSummaryResponse> getMyProjects(CustomUserDetails user) {
-
+    public ProjectListResponse getMyProjects(
+            CustomUserDetails user,
+            String keyword,
+            int page,
+            int size
+    ) {
+        Long userId = user.getId();
         UserRole role = user.getRole();
 
-        List<Project> projects;
+        List<Project> projects =
+                projectRepository.searchMyProjects(userId, role, keyword, page, size);
 
-        switch (role) {
+        long total =
+                projectRepository.countMyProjects(userId, role, keyword);
 
-            case SYSTEM_ADMIN -> {
-                // 전체 프로젝트 조회
-                projects = projectRepository.findAllActiveProjects();
-            }
-
-            case AGENCY -> {
-                // 전체 프로젝트 조회 (볼 수 있음)
-                projects = projectRepository.findAllActiveProjects();
-            }
-
-            case CLIENT -> {
-                // 본인 프로젝트만 조회
-                projects = projectRepository.findActiveProjectsByUser(user.getId());
-            }
-
-            default -> throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        return projects.stream()
-                .map(ProjectSummaryResponse::from)
-                .toList();
+        return ProjectListResponse.of(projects, total, page, size);
     }
 
     // 프로젝트 상세 조회

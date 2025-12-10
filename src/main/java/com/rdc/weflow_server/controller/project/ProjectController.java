@@ -3,6 +3,7 @@ package com.rdc.weflow_server.controller.project;
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.project.response.ProjectDetailResponse;
+import com.rdc.weflow_server.dto.project.response.ProjectListResponse;
 import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.service.project.ProjectService;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +21,14 @@ public class ProjectController {
 
     // 내 프로젝트 조회
     @GetMapping("/my")
-    public ApiResponse<List<ProjectSummaryResponse>> getMyProjects(
-            @AuthenticationPrincipal CustomUserDetails user
+    public ApiResponse<ProjectListResponse> getMyProjects(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        List<ProjectSummaryResponse> projects =
-                projectService.getMyProjects(user);
+        ProjectListResponse projects =
+                projectService.getMyProjects(user, keyword, page, size);
 
         return ApiResponse.success("MY_PROJECT_LIST_FETCHED", projects);
     }

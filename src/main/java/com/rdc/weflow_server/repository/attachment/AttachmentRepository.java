@@ -27,5 +27,16 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
             Attachment.AttachmentType attachmentType
     );
 
+    @org.springframework.data.jpa.repository.Query("""
+            select distinct a.targetId
+            from Attachment a
+            where a.targetType = :targetType
+            and a.targetId in :targetIds
+            """)
+    List<Long> findTargetIdsWithAttachments(
+            @org.springframework.data.repository.query.Param("targetType") Attachment.TargetType targetType,
+            @org.springframework.data.repository.query.Param("targetIds") List<Long> targetIds
+    );
+
     void deleteByTargetTypeAndTargetId(Attachment.TargetType targetType, Long targetId);
 }

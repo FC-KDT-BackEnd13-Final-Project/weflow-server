@@ -33,7 +33,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -180,10 +183,7 @@ public class StepRequestService {
         stepService.getStepOrThrow(stepId);
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId, pageable);
-        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
-                .stream()
-                .map(this::toSummary)
-                .collect(Collectors.toList());
+        List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
 
         return StepRequestListResponse.builder()
                 .totalCount(pageResult.getTotalElements())
@@ -198,10 +198,7 @@ public class StepRequestService {
         // 정책: 삭제된 Step에 속한 Request도 프로젝트 히스토리로 조회 가능
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId, pageable);
-        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
-                .stream()
-                .map(this::toSummary)
-                .collect(Collectors.toList());
+        List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
 
         return StepRequestListResponse.builder()
                 .totalCount(pageResult.getTotalElements())
@@ -231,10 +228,7 @@ public class StepRequestService {
                 ? stepRequestRepository.findByStep_Project_IdInAndStatusOrderByCreatedAtDesc(projectIds, status, pageable)
                 : stepRequestRepository.findByStep_Project_IdInOrderByCreatedAtDesc(projectIds, pageable);
 
-        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
-                .stream()
-                .map(this::toSummary)
-                .collect(Collectors.toList());
+        List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
 
         return StepRequestListResponse.builder()
                 .totalCount(pageResult.getTotalElements())
@@ -420,8 +414,7 @@ public class StepRequestService {
                 .build();
     }
 
-    private StepRequestSummaryResponse toSummary(StepRequest stepRequest) {
-        boolean hasAttachment = hasAttachment(stepRequest);
+    private StepRequestSummaryResponse toSummary(StepRequest stepRequest, boolean hasAttachment) {
         return StepRequestSummaryResponse.builder()
                 .id(stepRequest.getId())
                 .title(stepRequest.getRequestTitle())
@@ -447,31 +440,33 @@ public class StepRequestService {
                 .collect(Collectors.toList());
     }
 
+    private List<StepRequestSummaryResponse> toSummaries(List<StepRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> requestIds = requests.stream()
+                .map(StepRequest::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Set<Long> requestIdsWithAttachments = new HashSet<>(
+                attachmentRepository.findTargetIdsWithAttachments(
+                        Attachment.TargetType.STEP_REQUEST,
+                        requestIds
+                )
+        );
+
+        return requests.stream()
+                .map(req -> toSummary(req, req != null && requestIdsWithAttachments.contains(req.getId())))
+                .collect(Collectors.toList());
+    }
+
     private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {
         String url = attachment.getAttachmentType() == Attachment.AttachmentType.FILE && attachment.getFilePath() != null
                 ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath(), attachment.getFileName())
                 : attachment.getUrl();
         return AttachmentSimpleResponse.from(attachment, url);
-    }
-
-    private boolean hasAttachment(StepRequest stepRequest) {
-        if (stepRequest == null || stepRequest.getId() == null) {
-            return false;
-        }
-        int fileCount = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
-                Attachment.TargetType.STEP_REQUEST,
-                stepRequest.getId(),
-                Attachment.AttachmentType.FILE
-        );
-        if (fileCount > 0) {
-            return true;
-        }
-        int linkCount = attachmentRepository.countByTargetTypeAndTargetIdAndAttachmentType(
-                Attachment.TargetType.STEP_REQUEST,
-                stepRequest.getId(),
-                Attachment.AttachmentType.LINK
-        );
-        return linkCount > 0;
     }
 
     private void saveHistory(StepRequest stepRequest, StepRequestHistory.HistoryType type, String fieldName, String beforeContent, String afterContent, User updatedBy) {

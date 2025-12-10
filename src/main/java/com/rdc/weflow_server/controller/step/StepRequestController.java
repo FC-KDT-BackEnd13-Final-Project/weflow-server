@@ -6,6 +6,9 @@ import com.rdc.weflow_server.dto.step.StepRequestCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestListResponse;
 import com.rdc.weflow_server.dto.step.StepRequestResponse;
 import com.rdc.weflow_server.dto.step.StepRequestUpdateRequest;
+import com.rdc.weflow_server.entity.step.StepRequestStatus;
+import com.rdc.weflow_server.exception.BusinessException;
+import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.step.StepRequestService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +50,18 @@ public class StepRequestController {
                                                                      @RequestParam(defaultValue = "20") int size) {
         StepRequestListResponse response = stepRequestService.getRequestsByProject(projectId, page, size);
         return ApiResponse.success("stepRequest.listByProject.success", response);
+    }
+
+    @GetMapping("/requests/my")
+    public ApiResponse<StepRequestListResponse> getMyProjectRequests(@AuthenticationPrincipal CustomUserDetails user,
+                                                                     @RequestParam(defaultValue = "0") int page,
+                                                                     @RequestParam(defaultValue = "20") int size,
+                                                                     @RequestParam(required = false) StepRequestStatus status) {
+        if (user == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        StepRequestListResponse response = stepRequestService.getRequestsByMyProjects(user.getId(), page, size, status);
+        return ApiResponse.success("stepRequest.listByMyProjects.success", response);
     }
 
     @GetMapping("/requests/{requestId}")

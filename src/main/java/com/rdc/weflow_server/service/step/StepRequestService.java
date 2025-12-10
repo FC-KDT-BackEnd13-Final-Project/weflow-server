@@ -211,6 +211,39 @@ public class StepRequestService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public StepRequestListResponse getRequestsByMyProjects(Long userId, int page, int size, StepRequestStatus status) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<Long> projectIds = projectMemberRepository.findActiveProjectIdsByUserId(userId);
+        if (projectIds.isEmpty()) {
+            return StepRequestListResponse.builder()
+                    .totalCount(0L)
+                    .page(page)
+                    .size(size)
+                    .stepRequestSummaryResponses(List.of())
+                    .build();
+        }
+
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        var pageResult = status != null
+                ? stepRequestRepository.findByStep_Project_IdInAndStatusOrderByCreatedAtDesc(projectIds, status, pageable)
+                : stepRequestRepository.findByStep_Project_IdInOrderByCreatedAtDesc(projectIds, pageable);
+
+        List<StepRequestSummaryResponse> summaries = pageResult.getContent()
+                .stream()
+                .map(this::toSummary)
+                .collect(Collectors.toList());
+
+        return StepRequestListResponse.builder()
+                .totalCount(pageResult.getTotalElements())
+                .page(pageResult.getNumber())
+                .size(pageResult.getSize())
+                .stepRequestSummaryResponses(summaries)
+                .build();
+    }
+
     // 현재 정책: WAITING_APPROVAL 상태에서만 취소 가능, 상태를 CANCELED로 전이하며 히스토리에 남김
     public void cancelRequest(Long requestId, AuditContext ctx) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -395,6 +428,10 @@ public class StepRequestService {
                 .status(stepRequest.getStatus())
                 .createdAt(stepRequest.getCreatedAt())
                 .decidedAt(stepRequest.getDecidedAt())
+                .projectId(stepRequest.getStep() != null && stepRequest.getStep().getProject() != null
+                        ? stepRequest.getStep().getProject().getId() : null)
+                .projectName(stepRequest.getStep() != null && stepRequest.getStep().getProject() != null
+                        ? stepRequest.getStep().getProject().getName() : null)
                 .stepId(stepRequest.getStep() != null ? stepRequest.getStep().getId() : null)
                 .stepTitle(stepRequest.getStep() != null ? stepRequest.getStep().getTitle() : null)
                 .requestedBy(stepRequest.getRequestedBy() != null ? stepRequest.getRequestedBy().getId() : null)

@@ -24,6 +24,12 @@ public interface StepRequestRepository extends JpaRepository<StepRequest, Long> 
     @EntityGraph(attributePaths = {"step", "requestedBy"})
     Page<StepRequest> findByStep_Project_IdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"step", "step.project", "requestedBy"})
+    Page<StepRequest> findByStep_Project_IdInOrderByCreatedAtDesc(List<Long> projectIds, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"step", "step.project", "requestedBy"})
+    Page<StepRequest> findByStep_Project_IdInAndStatusOrderByCreatedAtDesc(List<Long> projectIds, StepRequestStatus status, Pageable pageable);
+
     boolean existsByStep_Id(Long stepId);
 
     List<StepRequest> findByStep_IdOrderByCreatedAtDesc(Long stepId);

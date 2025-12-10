@@ -18,6 +18,8 @@ public class StepRequestSummaryResponse {
     private StepRequestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime decidedAt;
+    private Long projectId;
+    private String projectName;
     private Long stepId;
     private String stepTitle;
     private Long requestedBy;
@@ -31,6 +33,8 @@ public class StepRequestSummaryResponse {
                 .status(sr.getStatus())
                 .createdAt(sr.getCreatedAt())
                 .decidedAt(sr.getDecidedAt())
+                .projectId(sr.getStep().getProject().getId())
+                .projectName(sr.getStep().getProject().getName())
                 .stepId(sr.getStep().getId())
                 .stepTitle(sr.getStep().getTitle())
                 .requestedBy(sr.getRequestedBy().getId())

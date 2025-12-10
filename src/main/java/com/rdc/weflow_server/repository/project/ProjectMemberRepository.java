@@ -41,6 +41,12 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
             @Param("userId") Long userId
     );
 
+    @Query("select pm.project.id from ProjectMember pm " +
+            "where pm.user.id = :userId " +
+            "and pm.deletedAt is null " +
+            "and pm.project.deletedAt is null")
+    List<Long> findActiveProjectIdsByUserId(@Param("userId") Long userId);
+
     /** 카운트용(삭제멤버 제외) */
     @Query("select count(pm) from ProjectMember pm " +
             "where pm.user.id = :userId " +

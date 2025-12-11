@@ -34,4 +34,5 @@ public interface StepRepository extends JpaRepository<Step, Long> {
 
     Optional<Step> findByIdAndDeletedAtIsNull(Long id);
     List<Step> findByProjectIdOrderByOrderIndexAsc(Long projectId);
+    Optional<Step> findByProject_IdAndOrderIndexAndDeletedAtIsNull(Long projectId, Integer orderIndex);
 }

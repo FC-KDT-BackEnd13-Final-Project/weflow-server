@@ -25,6 +25,7 @@ import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
+import com.rdc.weflow_server.repository.step.StepRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.file.S3FileService;
@@ -53,6 +54,7 @@ public class StepRequestService {
     private final ActivityLogService activityLogService;
     private final S3FileService s3FileService;
     private final NotificationService notificationService;
+    private final StepRepository stepRepository;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
@@ -79,6 +81,8 @@ public class StepRequestService {
         if (step.getStatus() == StepStatus.APPROVED) {
             throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
         }
+
+        validatePreviousStepApproved(step);
 
         StepRequest stepRequest = StepRequest.builder()
                 .requestTitle(request.getTitle())
@@ -518,6 +522,26 @@ public class StepRequestService {
             step.updateStatus(StepStatus.WAITING_APPROVAL);
         } else {
             step.updateStatus(StepStatus.PENDING);
+        }
+    }
+
+    private void validatePreviousStepApproved(Step step) {
+        if (step == null || step.getProject() == null || step.getOrderIndex() == null) {
+            throw new BusinessException(ErrorCode.INVALID_STEP_ORDER);
+        }
+
+        Integer orderIndex = step.getOrderIndex();
+        if (orderIndex <= 1) {
+            return; // 첫 단계는 예외
+        }
+
+        Step previousStep = stepRepository.findByProject_IdAndOrderIndexAndDeletedAtIsNull(
+                        step.getProject().getId(),
+                        orderIndex - 1)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_STEP_ORDER));
+
+        if (previousStep.getStatus() != StepStatus.APPROVED) {
+            throw new BusinessException(ErrorCode.PREVIOUS_STEP_NOT_APPROVED);
         }
     }
 

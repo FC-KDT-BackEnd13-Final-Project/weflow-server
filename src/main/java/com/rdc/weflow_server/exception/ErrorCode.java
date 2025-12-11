@@ -58,6 +58,8 @@ public enum ErrorCode {
     STEP_ALREADY_EXISTS(HttpStatus.CONFLICT, "STEP_002", "이미 존재하는 단계입니다."),
     STEP_ORDER_INVALID(HttpStatus.BAD_REQUEST, "STEP_003", "단계 순서 값이 잘못되었습니다."),
     STEP_STATUS_INVALID(HttpStatus.BAD_REQUEST, "STEP_004", "단계 상태가 올바르지 않습니다."),
+    PREVIOUS_STEP_NOT_APPROVED(HttpStatus.BAD_REQUEST, "STEP_005", "이전 단계가 승인되지 않아 승인요청을 생성할 수 없습니다."),
+    INVALID_STEP_ORDER(HttpStatus.BAD_REQUEST, "STEP_006", "단계 순서 정보가 올바르지 않습니다."),
 
     // StepRequest
     STEP_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "STEP_REQUEST_001", "승인 요청을 찾을 수 없습니다."),

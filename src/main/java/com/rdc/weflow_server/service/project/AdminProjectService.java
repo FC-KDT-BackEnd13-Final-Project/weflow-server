@@ -12,6 +12,7 @@ import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectRole;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.user.User;
@@ -113,6 +114,7 @@ public class AdminProjectService {
 
     // 프로젝트 목록 조회
     public AdminProjectListResponse getProjectList(
+            ProjectPhase phase,
             ProjectStatus status,
             Long companyId,
             String keyword,
@@ -120,10 +122,10 @@ public class AdminProjectService {
             int size
     ) {
         List<Project> projects = projectRepository.searchAdminProjects(
-                status, companyId, keyword, page, size
+                phase, status, companyId, keyword, page, size
         );
 
-        long total = projectRepository.countAdminProjects(status, companyId, keyword);
+        long total = projectRepository.countAdminProjects(phase, status, companyId, keyword);
 
         return AdminProjectListResponse.of(projects, total, page, size);
     }
@@ -153,6 +155,7 @@ public class AdminProjectService {
 
         // 상태 변경 여부 비교를 위해 기존 상태 저장
         ProjectStatus oldStatus = project.getStatus();
+        ProjectPhase oldPhase = project.getPhase();
 
         // 회사 변경 필요할 경우
         Company company = null;
@@ -165,6 +168,7 @@ public class AdminProjectService {
         project.updateProject(
                 request.getName(),
                 request.getDescription(),
+                request.getPhase(),
                 request.getStatus(),
                 request.getStartDate(),
                 request.getEndDateExpected(),
@@ -194,18 +198,16 @@ public class AdminProjectService {
         // 어떤 타입의 알림을 보낼지 결정
         NotificationType type;
 
-        // 상태가 변경되었을 때
-        if (request.getStatus() != null && oldStatus != request.getStatus()) {
-
-            // 완료 상태로 바뀌었으면 PROJECT_COMPLETED
-            if (request.getStatus() == ProjectStatus.CLOSED) {
-                type = NotificationType.PROJECT_COMPLETED;
-            } else {
-                type = NotificationType.PROJECT_STATUS_CHANGED;
-            }
-
-        } else {
-            // 상태 변경이 아니면 정보 변경
+        // 상태가 CLOSED로 변경되었을 때
+        if (request.getStatus() != null && oldStatus != request.getStatus() && request.getStatus() == ProjectStatus.CLOSED) {
+            type = NotificationType.PROJECT_COMPLETED;
+        }
+        // Phase가 변경되었을 때
+        else if (request.getPhase() != null && oldPhase != request.getPhase()) {
+            type = NotificationType.PROJECT_STATUS_CHANGED;
+        }
+        // 그 외 정보 변경
+        else {
             type = NotificationType.PROJECT_INFO_UPDATED;
         }
 

@@ -1,5 +1,6 @@
 package com.rdc.weflow_server.dto.project.request;
 
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ public class AdminProjectUpdateRequest {
 
     private String name;
     private String description;
+    private ProjectPhase phase;
     private ProjectStatus status;
 
     private LocalDateTime startDate;

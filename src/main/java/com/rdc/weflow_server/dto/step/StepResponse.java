@@ -1,6 +1,6 @@
 package com.rdc.weflow_server.dto.step;
 
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class StepResponse {
 
     private Long id;
-    private ProjectStatus phase;
+    private ProjectPhase phase;
     private String title;
     private String description;
     private Integer orderIndex;

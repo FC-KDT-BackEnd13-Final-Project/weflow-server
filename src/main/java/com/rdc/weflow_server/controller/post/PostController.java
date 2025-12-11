@@ -2,7 +2,8 @@ package com.rdc.weflow_server.controller.post;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.post.*;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.post.PostOpenStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.service.post.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,8 @@ public class PostController {
     @GetMapping
     public ApiResponse<PostListResponse> getPosts(
             @PathVariable Long projectId,
-            @RequestParam(required = false) ProjectStatus projectStatus,
+            @RequestParam(required = false) ProjectPhase projectPhase,
+            @RequestParam(required = false) PostOpenStatus openStatus,
             @RequestParam(required = false) Long stepId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -44,7 +46,7 @@ public class PostController {
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
 
-        PostListResponse response = postService.getPosts(projectId, projectStatus, stepId, pageable);
+        PostListResponse response = postService.getPosts(projectId, projectPhase, openStatus, stepId, pageable);
         return ApiResponse.success("게시글 목록 조회 성공", response);
     }
 

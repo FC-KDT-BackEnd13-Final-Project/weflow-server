@@ -9,6 +9,8 @@ import com.rdc.weflow_server.service.user.SystemAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,8 +41,8 @@ public class SystemAdminController {
 
     /** 관리자 계정 목록 조회 */
     @GetMapping
-    public ApiResponse<List<AdminUserResponse>> getAdmins() {
-        List<AdminUserResponse> admins = systemAdminService.getAdmins();
+    public ApiResponse<Page<AdminUserResponse>> getAdmins(Pageable pageable) {
+        Page<AdminUserResponse> admins = systemAdminService.getAdmins(pageable);
         return ApiResponse.success("SYSTEM_ADMIN_LIST", admins);
     }
 

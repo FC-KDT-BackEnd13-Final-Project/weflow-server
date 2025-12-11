@@ -1,7 +1,7 @@
 package com.rdc.weflow_server.entity.post;
 
 import com.rdc.weflow_server.entity.BaseEntity;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
@@ -29,7 +29,7 @@ public class Post extends BaseEntity {
     private String content; // 내용
 
     @Column
-    private ProjectStatus projectStatus; // 게시글이 어떤 phase에 속해있는지 계약-진행-납품-유지보수
+    private ProjectPhase projectPhase; // 게시글이 어떤 phase에 속해있는지 계약-진행-납품-유지보수
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false) // TODO: DELETED 없애도 될 것 같아요. 나중에 확인 @Jaehee

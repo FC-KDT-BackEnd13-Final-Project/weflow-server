@@ -6,7 +6,7 @@ import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.comment.Comment;
 import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.post.*;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
@@ -148,13 +148,14 @@ public class PostService {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .status(post.getStatus())
+                .openStatus(post.getOpenStatus())
                 .author(PostDetailResponse.AuthorDto.builder()
                         .memberId(post.getUser().getId())
                         .name(post.getUser().getName())
                         .role(post.getUser().getRole().name())
                         .companyName(companyName)
                         .build())
-                .projectStatus(post.getStep().getProject().getStatus())
+                .projectPhase(post.getProjectPhase())
                 .step(PostDetailResponse.StepDto.builder()
                         .stepId(post.getStep().getId())
                         .stepName(post.getStep().getTitle())
@@ -173,14 +174,20 @@ public class PostService {
      * 게시글 list 조회
      * TODO: 나중에 동적 쿼리 (Querydsl 등으로 refactoring 할 필요 있음)
      */
-    public PostListResponse getPosts(Long projectId, ProjectStatus projectStatus, Long stepId, Pageable pageable) {
+    public PostListResponse getPosts(Long projectId, ProjectPhase projectPhase, PostOpenStatus openStatus, Long stepId, Pageable pageable) {
         Page<Post> postPage;
 
         // 필터에 따라 게시글 조회
-        if (stepId != null) {
+        if (stepId != null && openStatus != null) {
+            postPage = postRepository.findByStepIdAndOpenStatusAndDeletedAtIsNull(stepId, openStatus, pageable);
+        } else if (stepId != null) {
             postPage = postRepository.findByStepIdAndDeletedAtIsNull(stepId, pageable);
-        } else if (projectStatus != null) {
-            postPage = postRepository.findByStepProjectIdAndStepProjectStatusAndDeletedAtIsNull(projectId, projectStatus, pageable);
+        } else if (projectPhase != null && openStatus != null) {
+            postPage = postRepository.findByStepProjectIdAndProjectPhaseAndOpenStatusAndDeletedAtIsNull(projectId, projectPhase, openStatus, pageable);
+        } else if (projectPhase != null) {
+            postPage = postRepository.findByStepProjectIdAndProjectPhaseAndDeletedAtIsNull(projectId, projectPhase, pageable);
+        } else if (openStatus != null) {
+            postPage = postRepository.findByStepProjectIdAndOpenStatusAndDeletedAtIsNull(projectId, openStatus, pageable);
         } else {
             postPage = postRepository.findByStepProjectIdAndDeletedAtIsNull(projectId, pageable);
         }
@@ -225,7 +232,7 @@ public class PostService {
                             .postId(post.getId())
                             .title(post.getTitle())
                             .status(post.getStatus())
-                            .projectStatus(post.getStep().getProject().getStatus())
+                            .projectPhase(post.getProjectPhase())
                             .stepId(post.getStep().getId())
                             .author(PostListResponse.AuthorDto.builder()
                                     .memberId(post.getUser().getId())
@@ -299,7 +306,7 @@ public class PostService {
                 .content(request.getContent())
                 .status(status)
                 .openStatus(PostOpenStatus.OPEN)
-                .projectStatus(request.getProjectStatus())
+                .projectPhase(request.getProjectPhase())
                 .step(step)
                 .user(user)
                 .parentPost(parentPost)

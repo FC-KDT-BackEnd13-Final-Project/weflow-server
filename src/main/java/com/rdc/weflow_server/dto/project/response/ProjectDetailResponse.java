@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import lombok.*;
 
@@ -15,6 +16,7 @@ public class ProjectDetailResponse {
     private Long id;
     private String name;
     private String description;
+    private ProjectPhase phase;
     private ProjectStatus status;
 
     private LocalDateTime startDate;
@@ -27,6 +29,7 @@ public class ProjectDetailResponse {
                 .id(project.getId())
                 .name(project.getName())
                 .description(project.getDescription())
+                .phase(project.getPhase())
                 .status(project.getStatus())
                 .startDate(project.getStartDate())
                 .endDateExpected(project.getExpectedEndDate())

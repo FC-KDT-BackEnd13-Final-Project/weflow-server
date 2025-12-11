@@ -6,6 +6,7 @@ import com.rdc.weflow_server.dto.project.request.AdminProjectCreateRequest;
 import com.rdc.weflow_server.dto.project.request.AdminProjectMemberAddRequest;
 import com.rdc.weflow_server.dto.project.request.AdminProjectUpdateRequest;
 import com.rdc.weflow_server.dto.project.response.*;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.service.project.AdminProjectService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,13 +41,14 @@ public class AdminProjectController {
     // 프로젝트 목록 조회
     @GetMapping
     public ApiResponse<AdminProjectListResponse> getProjects(
+            @RequestParam(required = false) ProjectPhase phase,
             @RequestParam(required = false) ProjectStatus status,
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        AdminProjectListResponse response = adminProjectService.getProjectList(status, companyId, keyword, page, size);
+        AdminProjectListResponse response = adminProjectService.getProjectList(phase, status, companyId, keyword, page, size);
         return ApiResponse.success("PROJECT_LIST_FETCHED", response);
     }
 

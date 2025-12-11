@@ -2,7 +2,7 @@ package com.rdc.weflow_server.entity.step;
 
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.project.Project;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,7 +38,7 @@ public class Step extends BaseEntity {
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private ProjectStatus phase; // 상위 카테고리
+    private ProjectPhase phase; // 상위 카테고리
 
     @Column(nullable = false)
     private String title; // 단계 이름(요구사항, 기획, 디자인, 퍼블리싱, 개발 등)

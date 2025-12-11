@@ -14,6 +14,8 @@ import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,10 +63,9 @@ public class SystemAdminService {
     }
 
     /** SYSTEM_ADMIN 목록 조회 */
-    public List<AdminUserResponse> getAdmins() {
-        return userRepository.findAllByRole(UserRole.SYSTEM_ADMIN).stream()
-                .map(AdminUserResponse::from)
-                .toList();
+    public Page<AdminUserResponse> getAdmins(Pageable pageable) {
+        return userRepository.findAllByRole(UserRole.SYSTEM_ADMIN, pageable)
+                .map(AdminUserResponse::from);
     }
 
     /** SYSTEM_ADMIN 상세 조회 */

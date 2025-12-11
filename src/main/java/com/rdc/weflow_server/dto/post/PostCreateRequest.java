@@ -1,6 +1,6 @@
 package com.rdc.weflow_server.dto.post;
 
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,7 +16,7 @@ public class PostCreateRequest {
     private String content;
     private Long stepId;
     private Long parentPostId; // 답글인 경우
-    private ProjectStatus projectStatus;
+    private ProjectPhase projectPhase;
     private List<FileRequest> files;
     private List<LinkRequest> links;
     private List<QuestionRequest> questions;

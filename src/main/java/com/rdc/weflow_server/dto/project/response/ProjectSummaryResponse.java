@@ -2,6 +2,7 @@ package com.rdc.weflow_server.dto.project.response;
 
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectRole;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ public class ProjectSummaryResponse {
 
     private Long projectId;
     private String name;
+    private ProjectPhase phase;
     private ProjectStatus status;
     private String customerCompanyName;
 
@@ -24,6 +26,7 @@ public class ProjectSummaryResponse {
         return ProjectSummaryResponse.builder()
                 .projectId(p.getId())
                 .name(p.getName())
+                .phase(p.getPhase())
                 .status(p.getStatus())
                 .customerCompanyName(p.getCompany().getName())
                 .build();

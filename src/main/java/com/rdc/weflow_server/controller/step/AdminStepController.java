@@ -7,7 +7,7 @@ import com.rdc.weflow_server.dto.step.StepListResponse;
 import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.step.StepService;
 import jakarta.validation.Valid;
@@ -34,6 +34,30 @@ public class AdminStepController {
 
     private final StepService stepService;
 
+    /**
+     * Step list 조회
+     */
+    @GetMapping("/projects/{projectId}/steps")
+    public ApiResponse<StepListResponse> getSteps(@PathVariable Long projectId,
+                                                  @RequestParam(name = "phase", required = false) ProjectPhase phase) {
+        StepListResponse response = (phase != null)
+                ? stepService.getStepsByProject(projectId, phase)
+                : stepService.getStepsByProject(projectId);
+        return ApiResponse.success("step.list.success", response);
+    }
+
+    /**
+     * Step 상세 조회
+     */
+    @GetMapping("/steps/{stepId}")
+    public ApiResponse<StepResponse> getStep(@PathVariable Long stepId) {
+        StepResponse response = stepService.getStep(stepId);
+        return ApiResponse.success("step.get.success", response);
+    }
+
+    /**
+     * Step 생성
+     */
     @PostMapping("/projects/{projectId}/steps")
     public ApiResponse<StepResponse> createStep(@PathVariable Long projectId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
@@ -44,21 +68,9 @@ public class AdminStepController {
         return ApiResponse.success("step.create.success", response);
     }
 
-    @GetMapping("/projects/{projectId}/steps")
-    public ApiResponse<StepListResponse> getSteps(@PathVariable Long projectId,
-                                                  @RequestParam(name = "phase", required = false) ProjectStatus phase) {
-        StepListResponse response = (phase != null)
-                ? stepService.getStepsByProject(projectId, phase)
-                : stepService.getStepsByProject(projectId);
-        return ApiResponse.success("step.list.success", response);
-    }
-
-    @GetMapping("/steps/{stepId}")
-    public ApiResponse<StepResponse> getStep(@PathVariable Long stepId) {
-        StepResponse response = stepService.getStep(stepId);
-        return ApiResponse.success("step.get.success", response);
-    }
-
+    /**
+     * Step 수정
+     */
     @PatchMapping("/steps/{stepId}")
     public ApiResponse<StepResponse> updateStep(@PathVariable Long stepId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
@@ -69,6 +81,9 @@ public class AdminStepController {
         return ApiResponse.success("step.update.success", response);
     }
 
+    /**
+     * Step 삭제
+     */
     @DeleteMapping("/steps/{stepId}")
     public ApiResponse<Void> deleteStep(@PathVariable Long stepId,
                                         @AuthenticationPrincipal CustomUserDetails user,
@@ -78,6 +93,9 @@ public class AdminStepController {
         return ApiResponse.success("step.delete.success", null);
     }
 
+    /**
+     * Step 순서 바꾸기
+     */
     @PatchMapping("/steps/reorder")
     public ApiResponse<Void> reorderSteps(@AuthenticationPrincipal CustomUserDetails user,
                                           @RequestBody @Valid StepReorderRequest request,

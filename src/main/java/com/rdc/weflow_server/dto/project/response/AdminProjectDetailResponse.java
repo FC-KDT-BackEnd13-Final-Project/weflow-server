@@ -14,6 +14,7 @@ public class AdminProjectDetailResponse {
     private Long id;
     private String name;
     private String description;
+    private String phase;
     private String status;
 
     private LocalDateTime startDate;
@@ -39,6 +40,7 @@ public class AdminProjectDetailResponse {
                 .id(p.getId())
                 .name(p.getName())
                 .description(p.getDescription())
+                .phase(p.getPhase().name())
                 .status(p.getStatus().name())
 
                 .startDate(p.getStartDate())

@@ -3,6 +3,7 @@ package com.rdc.weflow_server.repository.project;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.project.QProject;
 import com.rdc.weflow_server.entity.project.QProjectMember;
@@ -18,12 +19,13 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     private final JPAQueryFactory query;
 
     @Override
-    public List<Project> searchAdminProjects(ProjectStatus status, Long companyId, String keyword, int page, int size) {
+    public List<Project> searchAdminProjects(ProjectPhase phase, ProjectStatus status, Long companyId, String keyword, int page, int size) {
         QProject project = QProject.project;
 
         return query
                 .selectFrom(project)
                 .where(
+                        eqPhase(phase),
                         eqStatus(status),
                         eqCompany(companyId),
                         containsName(keyword)
@@ -35,13 +37,14 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     }
 
     @Override
-    public long countAdminProjects(ProjectStatus status, Long companyId, String keyword) {
+    public long countAdminProjects(ProjectPhase phase, ProjectStatus status, Long companyId, String keyword) {
         QProject project = QProject.project;
 
         return Optional.ofNullable(
                 query.select(project.count())
                         .from(project)
                         .where(
+                                eqPhase(phase),
                                 eqStatus(status),
                                 eqCompany(companyId),
                                 containsName(keyword)
@@ -91,6 +94,10 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     // ========================
     // Helper Expressions
     // ========================
+
+    private BooleanExpression eqPhase(ProjectPhase phase) {
+        return phase != null ? QProject.project.phase.eq(phase) : null;
+    }
 
     private BooleanExpression eqStatus(ProjectStatus status) {
         return status != null ? QProject.project.status.eq(status) : null;

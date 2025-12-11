@@ -1,6 +1,6 @@
 package com.rdc.weflow_server.dto.step;
 
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,5 +15,5 @@ public class StepCreateRequest {
     private String title;
     private String description;
     private Integer orderIndex;
-    private ProjectStatus phase;
+    private ProjectPhase phase;
 }

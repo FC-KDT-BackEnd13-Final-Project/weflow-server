@@ -22,9 +22,9 @@ public class AdminDashboardService {
 
     public AdminDashboardResponse getDashboard() {
 
-        long totalUsers = userRepository.count();
-        long totalCompanies = companyRepository.count();
-        long totalProjects = projectRepository.count();
+        long totalUsers = userRepository.countActiveUsers();
+        long totalCompanies = companyRepository.countActiveCompanies();
+        long totalProjects = projectRepository.countActiveProjects();
 
         // 최근 로그 5개만 가져오기
         List<ActivityLogResponseDto> recentLogs =

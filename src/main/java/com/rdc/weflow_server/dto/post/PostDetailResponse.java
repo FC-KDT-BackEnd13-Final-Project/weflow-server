@@ -1,7 +1,8 @@
 package com.rdc.weflow_server.dto.post;
 
 import com.rdc.weflow_server.entity.post.PostApprovalStatus;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.post.PostOpenStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,8 +21,9 @@ public class PostDetailResponse {
     private String title;
     private String content;
     private PostApprovalStatus status;
+    private PostOpenStatus openStatus;
     private AuthorDto author;
-    private ProjectStatus projectStatus;
+    private ProjectPhase projectPhase;
     private StepDto step;
     private List<FileDto> files;
     private List<LinkDto> links;

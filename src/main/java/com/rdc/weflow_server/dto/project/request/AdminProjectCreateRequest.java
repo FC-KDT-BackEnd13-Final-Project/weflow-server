@@ -3,6 +3,7 @@ package com.rdc.weflow_server.dto.project.request;
 import com.rdc.weflow_server.dto.step.StepCreateRequest;
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,7 @@ public class AdminProjectCreateRequest {
 
     private String name;
     private String description;
-    private ProjectStatus status;
+    private ProjectPhase phase;
 
     private LocalDateTime startDate;
     private LocalDateTime endDateExpected;
@@ -33,7 +34,8 @@ public class AdminProjectCreateRequest {
         return Project.builder()
                 .name(name)
                 .description(description)
-                .status(status)
+                .phase(phase != null ? phase : ProjectPhase.CONTRACT) // null이면 기본값 CONTRACT
+                .status(ProjectStatus.OPEN) // 생성 시 항상 OPEN
                 .startDate(startDate)
                 .endDate(null)
                 .expectedEndDate(endDateExpected)

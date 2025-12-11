@@ -2,6 +2,7 @@ package com.rdc.weflow_server.entity.project;
 
 import com.rdc.weflow_server.entity.BaseEntity;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +33,10 @@ public class Project extends BaseEntity {
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
+    private ProjectPhase phase;
+
+    @Column(nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
     private ProjectStatus status;
 
     @Column
@@ -52,6 +57,11 @@ public class Project extends BaseEntity {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
+    // 생성자 User
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", insertable = false, updatable = false)
+    private User createdUser;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
@@ -62,6 +72,7 @@ public class Project extends BaseEntity {
     public void updateProject(
             String name,
             String description,
+            ProjectPhase phase,
             ProjectStatus status,
             LocalDateTime startDate,
             LocalDateTime endDateExpected,
@@ -72,6 +83,7 @@ public class Project extends BaseEntity {
     ) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
+        if (phase != null) this.phase = phase;
         if (status != null) this.status = status;
         if (startDate != null) this.startDate = startDate;
         if (endDateExpected != null) this.expectedEndDate = endDateExpected;

@@ -3,7 +3,7 @@ package com.rdc.weflow_server.controller.step;
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.dto.step.StepListResponse;
 import com.rdc.weflow_server.dto.step.StepResponse;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.service.step.StepService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -24,7 +24,7 @@ public class StepController {
     // 프로젝트 단계 목록 조회
     @GetMapping(value = "/projects/{projectId}/steps")
     public ApiResponse<StepListResponse> getStepsByProject(@PathVariable Long projectId,
-                                                           @RequestParam(name = "phase", required = false) ProjectStatus phase) {
+                                                           @RequestParam(name = "phase", required = false) ProjectPhase phase) {
         StepListResponse response = (phase != null)
                 ? stepService.getStepsByProject(projectId, phase)
                 : stepService.getStepsByProject(projectId);

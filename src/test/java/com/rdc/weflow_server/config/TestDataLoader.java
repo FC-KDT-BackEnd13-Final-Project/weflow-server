@@ -7,6 +7,7 @@ import com.rdc.weflow_server.entity.post.Post;
 import com.rdc.weflow_server.entity.post.PostApprovalStatus;
 import com.rdc.weflow_server.entity.post.PostOpenStatus;
 import com.rdc.weflow_server.entity.project.Project;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepStatus;
@@ -100,7 +101,8 @@ public class TestDataLoader implements CommandLineRunner {
         Project testProject = Project.builder()
                 .name("샘플 프로젝트 - 홈페이지 리뉴얼")
                 .description("테스트를 위한 샘플 프로젝트입니다")
-                .status(ProjectStatus.IN_PROGRESS)
+                .phase(ProjectPhase.IN_PROGRESS)
+                .status(ProjectStatus.OPEN)
                 .startDate(LocalDateTime.now().minusDays(30))
                 .expectedEndDate(LocalDateTime.now().plusDays(60))
                 .contractPrice(new BigDecimal("10000000"))
@@ -111,7 +113,7 @@ public class TestDataLoader implements CommandLineRunner {
 
         // 2. Step 만들기 (여러 단계)
         Step step1 = Step.builder()
-                .phase(ProjectStatus.CONTRACT)
+                .phase(ProjectPhase.CONTRACT)
                 .title("계약 및 요구사항 정의")
                 .description("프로젝트 계약 및 초기 요구사항을 정의하는 단계")
                 .orderIndex(1)
@@ -122,7 +124,7 @@ public class TestDataLoader implements CommandLineRunner {
         stepRepository.save(step1);
 
         Step step2 = Step.builder()
-                .phase(ProjectStatus.IN_PROGRESS)
+                .phase(ProjectPhase.IN_PROGRESS)
                 .title("기획 및 설계")
                 .description("화면 기획 및 시스템 설계")
                 .orderIndex(2)
@@ -133,7 +135,7 @@ public class TestDataLoader implements CommandLineRunner {
         stepRepository.save(step2);
 
         Step step3 = Step.builder()
-                .phase(ProjectStatus.IN_PROGRESS)
+                .phase(ProjectPhase.IN_PROGRESS)
                 .title("디자인")
                 .description("UI/UX 디자인 작업")
                 .orderIndex(3)
@@ -144,7 +146,7 @@ public class TestDataLoader implements CommandLineRunner {
         stepRepository.save(step3);
 
         Step step4 = Step.builder()
-                .phase(ProjectStatus.IN_PROGRESS)
+                .phase(ProjectPhase.IN_PROGRESS)
                 .title("개발")
                 .description("프론트엔드 및 백엔드 개발")
                 .orderIndex(4)
@@ -155,7 +157,7 @@ public class TestDataLoader implements CommandLineRunner {
         stepRepository.save(step4);
 
         Step step5 = Step.builder()
-                .phase(ProjectStatus.DELIVERY)
+                .phase(ProjectPhase.DELIVERY)
                 .title("테스트 및 배포")
                 .description("QA 테스트 및 운영 배포")
                 .orderIndex(5)
@@ -169,7 +171,7 @@ public class TestDataLoader implements CommandLineRunner {
         Post post1 = Post.builder()
                 .title("홈페이지 메인 페이지 레이아웃 확인 부탁드립니다")
                 .content("메인 페이지 레이아웃을 다음과 같이 구성했습니다.\n\n1. 상단 네비게이션\n2. 메인 비주얼 배너\n3. 주요 서비스 소개\n4. 최근 소식\n5. 푸터\n\n검토 후 의견 부탁드립니다.")
-                .projectStatus(ProjectStatus.IN_PROGRESS)
+                .projectPhase(ProjectPhase.IN_PROGRESS)
                 .status(PostApprovalStatus.WAITING_CONFIRM)
                 .openStatus(PostOpenStatus.OPEN)
                 .step(step2)
@@ -180,7 +182,7 @@ public class TestDataLoader implements CommandLineRunner {
         Post post2 = Post.builder()
                 .title("요구사항 정의서 최종 확정")
                 .content("고객사와 협의한 요구사항 정의서를 첨부합니다.\n\n주요 기능:\n- 회원 관리\n- 게시판\n- 예약 시스템\n- 결제 연동\n\n해당 내용으로 진행하도록 하겠습니다.")
-                .projectStatus(ProjectStatus.CONTRACT)
+                .projectPhase(ProjectPhase.CONTRACT)
                 .status(PostApprovalStatus.CONFIRMED)
                 .openStatus(PostOpenStatus.CLOSED)
                 .step(step1)
@@ -191,7 +193,7 @@ public class TestDataLoader implements CommandLineRunner {
         Post post3 = Post.builder()
                 .title("디자인 시안 공유")
                 .content("첫 번째 디자인 시안을 공유드립니다.\n\n메인 컬러는 블루 계열로 선정했으며,\n전체적으로 모던하고 깔끔한 느낌을 주도록 작업했습니다.")
-                .projectStatus(ProjectStatus.IN_PROGRESS)
+                .projectPhase(ProjectPhase.IN_PROGRESS)
                 .status(PostApprovalStatus.NORMAL)
                 .openStatus(PostOpenStatus.OPEN)
                 .step(step3)

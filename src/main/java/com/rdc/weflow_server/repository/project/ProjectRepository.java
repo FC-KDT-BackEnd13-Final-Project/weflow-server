@@ -43,4 +43,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, Project
             "and pm.deletedAt is null and p.deletedAt is null " +
             "order by p.createdAt desc")
     List<Project> findActiveProjectsByUserOrderByCreatedDesc(@Param("userId") Long userId);
+
+    // 삭제되지 않은 프로젝트 수
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.deletedAt IS NULL")
+    long countActiveProjects();
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rdc.weflow_server.config.WithCustomMockUser;
 import com.rdc.weflow_server.dto.post.PostCreateRequest;
 import com.rdc.weflow_server.dto.post.PostUpdateRequest;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +75,7 @@ class PostControllerTest {
                 "테스트 게시글 내용입니다.",
                 STEP_ID,
                 null,
-                ProjectStatus.IN_PROGRESS,
+                ProjectPhase.IN_PROGRESS,
                 null,
                 null,
                 null
@@ -128,11 +128,11 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("게시글 목록 조회 - projectStatus 필터")
+    @DisplayName("게시글 목록 조회 - projectPhase 필터")
     @WithCustomMockUser
-    void getPostsWithProjectStatusFilter() throws Exception {
+    void getPostsWithProjectPhaseFilter() throws Exception {
         mockMvc.perform(get("/api/projects/{projectId}/posts", PROJECT_ID)
-                        .param("projectStatus", "IN_PROGRESS")
+                        .param("projectPhase", "IN_PROGRESS")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())

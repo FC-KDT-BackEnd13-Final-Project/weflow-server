@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class TemplateResponse {
-
     private Long templateId;
     private String title;
     private String description;
@@ -18,6 +17,7 @@ public class TemplateResponse {
     private int questionCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean isDeleted;
 
     public static TemplateResponse from(Checklist template, int questionCount) {
         return TemplateResponse.builder()
@@ -29,6 +29,7 @@ public class TemplateResponse {
                 .questionCount(questionCount)
                 .createdAt(template.getCreatedAt())
                 .updatedAt(template.getUpdatedAt())
+                .isDeleted(Boolean.TRUE.equals(template.getIsDeleted()))
                 .build();
     }
 }

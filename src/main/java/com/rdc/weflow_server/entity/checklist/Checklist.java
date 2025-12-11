@@ -6,6 +6,7 @@ import com.rdc.weflow_server.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +56,12 @@ public class Checklist extends BaseEntity {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    /** 삭제 여부 (Soft Delete) */
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
+
+    /** 삭제 시간 */
+    private LocalDateTime deletedAt;
     // 체크리스트 수정
     public void updateChecklist(String title, String description) {
         if (this.isLocked) {
@@ -84,5 +91,11 @@ public class Checklist extends BaseEntity {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
+    }
+
+    // 템플릿 Soft Delete
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }

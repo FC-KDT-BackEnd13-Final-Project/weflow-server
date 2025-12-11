@@ -11,7 +11,6 @@ import java.util.List;
 @Getter
 @Builder
 public class TemplateDetailResponse {
-
     private Long templateId;
     private String title;
     private String description;
@@ -20,6 +19,7 @@ public class TemplateDetailResponse {
     private LocalDateTime createdDate;
     private LocalDateTime lastModifiedDate;
     private List<QuestionDetailResponse> questions;
+    private boolean isDeleted;
 
     public static TemplateDetailResponse from(Checklist template, List<ChecklistQuestion> questionList) {
         return TemplateDetailResponse.builder()
@@ -30,6 +30,7 @@ public class TemplateDetailResponse {
                 .isLocked(template.getIsLocked())
                 .createdDate(template.getCreatedAt())
                 .lastModifiedDate(template.getUpdatedAt())
+                .isDeleted(template.getIsDeleted())
                 .questions(questionList.stream().map(QuestionDetailResponse::from).toList())
                 .build();
     }

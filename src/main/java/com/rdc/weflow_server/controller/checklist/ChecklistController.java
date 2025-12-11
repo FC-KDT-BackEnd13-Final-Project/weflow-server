@@ -11,6 +11,8 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.service.checklist.ChecklistService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,12 +40,15 @@ public class ChecklistController {
 
     // 프로젝트별 체크리스트 목록 조회
     @GetMapping
-    public ApiResponse<List<ChecklistResponse>> getProjectChecklists(
-            @RequestParam Long projectId
+    public ApiResponse<Page<ChecklistResponse>> getProjectChecklists(
+            @RequestParam Long projectId,
+            Pageable pageable
     ) {
-        List<ChecklistResponse> list = checklistService.getProjectChecklists(projectId);
-        return ApiResponse.success("PROJECT_CHECKLIST_LIST", list);
+        Page<ChecklistResponse> data =
+                checklistService.getProjectChecklists(projectId, pageable);
+        return ApiResponse.success("PROJECT_CHECKLIST_LIST", data);
     }
+
 
     // 체크리스트 상세 조회
     @GetMapping("/{checklistId}")

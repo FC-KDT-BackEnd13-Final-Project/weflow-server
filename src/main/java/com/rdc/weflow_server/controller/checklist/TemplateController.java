@@ -1,12 +1,16 @@
 package com.rdc.weflow_server.controller.checklist;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.checklist.request.ChecklistCreateRequest;
 import com.rdc.weflow_server.dto.checklist.response.TemplateDetailResponse;
 import com.rdc.weflow_server.dto.checklist.response.TemplateResponse;
 import com.rdc.weflow_server.dto.checklist.request.TemplateRequest;
 import com.rdc.weflow_server.service.checklist.ChecklistTemplateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,8 +23,8 @@ public class TemplateController {
 
     // 템플릿 생성
     @PostMapping
-    public ApiResponse<Long> createTemplate(@RequestBody ChecklistCreateRequest request) {
-        Long templateId = checklistTemplateService.createTemplate(request);
+    public ApiResponse<Long> createTemplate(@RequestBody ChecklistCreateRequest request,  @AuthenticationPrincipal CustomUserDetails user) {
+        Long templateId = checklistTemplateService.createTemplate(request, user.getUser());
         return ApiResponse.success(
                 "TEMPLATE_CREATED",
                 templateId
@@ -29,11 +33,9 @@ public class TemplateController {
 
     // 템플릿 목록 조회
     @GetMapping
-    public ApiResponse<List<TemplateResponse>> getTemplateList() {
-        return ApiResponse.success(
-                "TEMPLATE_LIST_FETCHED",
-                checklistTemplateService.getTemplateList()
-        );
+    public ApiResponse<Page<TemplateResponse>> getTemplateList(Pageable pageable) {
+        Page<TemplateResponse> data = checklistTemplateService.getTemplateList(pageable);
+        return ApiResponse.success("TEMPLATES_FETCHED", data);
     }
 
     // 템플릿 상세 조회

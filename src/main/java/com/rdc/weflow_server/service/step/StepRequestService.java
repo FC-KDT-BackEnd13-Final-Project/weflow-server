@@ -497,7 +497,7 @@ public class StepRequestService {
             return; // 첫 단계는 예외
         }
 
-        Step previousStep = stepRepository.findByProject_IdAndOrderIndexAndDeletedAtIsNull(
+        Step previousStep = stepRepository.findTopByProject_IdAndOrderIndexAndDeletedAtIsNullOrderByIdAsc(
                         step.getProject().getId(),
                         orderIndex - 1)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_STEP_ORDER));

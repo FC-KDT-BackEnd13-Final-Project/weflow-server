@@ -10,8 +10,8 @@ import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectMember;
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectRole;
-import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
@@ -94,7 +94,7 @@ public class StepService {
 
     // 프로젝트 단계 목록 조회 (phase 필터)
     @Transactional(readOnly = true)
-    public StepListResponse getStepsByProject(Long projectId, ProjectStatus phase) {
+    public StepListResponse getStepsByProject(Long projectId, ProjectPhase phase) {
         List<Step> steps = stepRepository.findByProject_IdAndPhaseAndDeletedAtIsNullOrderByOrderIndexAsc(projectId, phase);
 
         List<StepResponse> stepResponses = steps.stream()
@@ -127,7 +127,7 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_ALREADY_EXISTS);
         }
 
-        ProjectStatus phase = request.getPhase() != null ? request.getPhase() : ProjectStatus.IN_PROGRESS;
+        ProjectPhase phase = request.getPhase() != null ? request.getPhase() : ProjectPhase.IN_PROGRESS;
         Integer orderIndex = resolveOrderIndex(projectId, request.getOrderIndex());
         StepStatus status = StepStatus.PENDING;
 
@@ -164,7 +164,7 @@ public class StepService {
             return;
         }
 
-        ProjectStatus phase = ProjectStatus.IN_PROGRESS;
+        ProjectPhase phase = ProjectPhase.IN_PROGRESS;
         StepStatus status = StepStatus.PENDING;
 
         List<Step> defaults = List.of(
@@ -285,7 +285,7 @@ public class StepService {
         }
 
         // phase가 섞여 있으면 순서 변경 불가
-        Set<ProjectStatus> phases = steps.stream()
+        Set<ProjectPhase> phases = steps.stream()
                 .map(Step::getPhase)
                 .collect(Collectors.toSet());
         if (phases.size() > 1) {
@@ -378,7 +378,7 @@ public class StepService {
     private Step buildDefaultStep(
             Project project,
             User creator,
-            ProjectStatus phase,
+            ProjectPhase phase,
             StepStatus status,
             Integer orderIndex,
             String title

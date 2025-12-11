@@ -10,7 +10,6 @@ import com.rdc.weflow_server.entity.step.StepRequestAnswer;
 import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
-import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
@@ -96,11 +95,7 @@ public class StepRequestAnswerService {
         stepRequest.updateDecidedAt(LocalDateTime.now());
         stepRequest.updateDecidedBy(user);
 
-        if (newStatus == StepRequestStatus.APPROVED) {
-            stepRequest.getStep().updateStatus(StepStatus.APPROVED);
-        } else {
-            stepRequestService.refreshStepStatus(stepRequest.getStep());
-        }
+        stepRequestService.updateStepStatusBasedOnRequests(stepRequest.getStep());
 
         StepRequestAnswer saved = stepRequestAnswerRepository.save(answer);
         // REASON_UPDATE: 반려/승인 사유 afterContent 기록

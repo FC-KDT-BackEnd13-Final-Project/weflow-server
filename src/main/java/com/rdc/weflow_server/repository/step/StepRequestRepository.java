@@ -53,5 +53,6 @@ public interface StepRequestRepository extends JpaRepository<StepRequest, Long> 
             Long projectId,
             StepRequestStatus status
     );
+    boolean existsByStep_IdAndStatusIn(Long stepId, List<StepRequestStatus> statuses);
 
 }

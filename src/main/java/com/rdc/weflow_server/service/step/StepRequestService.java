@@ -509,20 +509,7 @@ public class StepRequestService {
     }
 
     public void refreshStepStatus(Step step) {
-        if (step == null) {
-            return;
-        }
-
-        if (step.getStatus() == StepStatus.APPROVED) {
-            return;
-        }
-
-        boolean hasRequested = stepRequestRepository.existsByStep_IdAndStatus(step.getId(), StepRequestStatus.REQUESTED);
-        if (hasRequested) {
-            step.updateStatus(StepStatus.WAITING_APPROVAL);
-        } else {
-            step.updateStatus(StepStatus.PENDING);
-        }
+        updateStepStatusBasedOnRequests(step);
     }
 
     private void validatePreviousStepApproved(Step step) {
@@ -543,6 +530,31 @@ public class StepRequestService {
         if (previousStep.getStatus() != StepStatus.APPROVED) {
             throw new BusinessException(ErrorCode.PREVIOUS_STEP_NOT_APPROVED);
         }
+    }
+
+    public void updateStepStatusBasedOnRequests(Step step) {
+        if (step == null || step.getId() == null) {
+            return;
+        }
+
+        List<StepRequestStatus> inProgressStatuses = List.of(
+                StepRequestStatus.REQUESTED,
+                StepRequestStatus.CHANGE_REQUESTED
+        );
+
+        boolean hasInProgress = stepRequestRepository.existsByStep_IdAndStatusIn(step.getId(), inProgressStatuses);
+        if (hasInProgress) {
+            step.updateStatus(StepStatus.WAITING_APPROVAL);
+            return;
+        }
+
+        boolean hasApproved = stepRequestRepository.existsByStep_IdAndStatus(step.getId(), StepRequestStatus.APPROVED);
+        if (hasApproved) {
+            step.updateStatus(StepStatus.APPROVED);
+            return;
+        }
+
+        step.updateStatus(StepStatus.PENDING);
     }
 
     private String toRequestContent(StepRequestCreateRequest request) {

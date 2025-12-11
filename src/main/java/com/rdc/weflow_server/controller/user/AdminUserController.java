@@ -112,4 +112,22 @@ public class AdminUserController {
         );
         return ApiResponse.success("회원 삭제 성공", null);
     }
+
+    /**
+     * 회원 복구
+     * PATCH /api/admin/users/{userId}/restore
+     */
+    @PatchMapping("/{userId}/restore")
+    public ApiResponse<UserResponse> restoreUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest) {
+
+        UserResponse response = userService.restoreUser(
+                userId,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
+        return ApiResponse.success("회원 복구 성공", response);
+    }
 }

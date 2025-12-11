@@ -261,4 +261,34 @@ public class UserService {
                 ipAddress
         );
     }
+
+    /**
+     * 관리자 - 회원 복구
+     * PATCH /api/admin/users/{userId}/restore
+     */
+    @Transactional
+    public UserResponse restoreUser(Long userId, Long adminId, String ipAddress) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 삭제되지 않은 회원은 복구 불가
+        if (user.getDeletedAt() == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_DELETED);
+        }
+
+        // 복구 수행
+        user.restore();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.USER,
+                userId,
+                adminId,
+                null,
+                ipAddress
+        );
+
+        return UserResponse.from(user);
+    }
 }

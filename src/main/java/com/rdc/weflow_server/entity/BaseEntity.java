@@ -24,8 +24,13 @@ public abstract class BaseEntity {
 
     private LocalDateTime deletedAt;
 
-    // Soft delete 메서드 추가
+    // Soft delete 메서드
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    // Restore 메서드 (삭제 취소)
+    public void restore() {
+        this.deletedAt = null;
     }
 }

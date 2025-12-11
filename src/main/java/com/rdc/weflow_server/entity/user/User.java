@@ -97,4 +97,15 @@ public class User extends BaseEntity {
         this.softDelete(); // BaseEntity의 메서드 호출
         this.status = UserStatus.DELETED; // 상태 변경
     }
+
+    /**
+     * [관리자] 회원 복구
+     * - 삭제 취소 (deletedAt = null)
+     * - 상태를 ACTIVE로 변경
+     */
+    @Override
+    public void restore() {
+        super.restore(); // BaseEntity의 restore() 메서드 호출 (deletedAt = null)
+        this.status = UserStatus.ACTIVE; // 상태 복구
+    }
 }

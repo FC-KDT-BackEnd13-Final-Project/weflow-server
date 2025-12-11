@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +33,13 @@ public class CompanyService {
     @Transactional
     public CompanyResponse createCompany(CreateCompanyRequest request, Long adminId, String ipAddress) {
         // 1. 사업자번호 중복 체크 (입력값이 있을 때만)
-        if (request.getBusinessNumber() != null &&
+        if (StringUtils.hasText(request.getBusinessNumber()) &&
                 companyRepository.existsByBusinessNumber(request.getBusinessNumber())) {
             throw new BusinessException(ErrorCode.COMPANY_BUSINESS_NUMBER_DUPLICATE);
         }
 
         // 2. 이메일 중복 체크 (입력값이 있을 때만)
-        if (request.getEmail() != null &&
+        if (StringUtils.hasText(request.getEmail()) &&
                 companyRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(ErrorCode.COMPANY_EMAIL_DUPLICATE);
         }
@@ -166,5 +167,35 @@ public class CompanyService {
                 null,
                 ipAddress
         );
+    }
+
+    /**
+     * 관리자 - 회사 복구
+     * PATCH /api/admin/companies/{companyId}/restore
+     */
+    @Transactional
+    public CompanyResponse restoreCompany(Long companyId, Long adminId, String ipAddress) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 삭제되지 않은 회사는 복구 불가
+        if (company.getDeletedAt() == null) {
+            throw new BusinessException(ErrorCode.COMPANY_NOT_DELETED);
+        }
+
+        // 복구 수행
+        company.restore();
+
+        // 로그 기록
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.COMPANY,
+                company.getId(),
+                adminId,
+                null,
+                ipAddress
+        );
+
+        return CompanyResponse.from(company);
     }
 }

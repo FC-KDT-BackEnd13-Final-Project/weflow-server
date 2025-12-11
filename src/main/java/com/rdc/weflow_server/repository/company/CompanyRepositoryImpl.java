@@ -28,8 +28,8 @@ public class CompanyRepositoryImpl implements CompanyRepositoryCustom {
                 .selectFrom(company)
                 .where(
                         keywordContains(condition.getKeyword()), // 검색어 조건
-                        statusEq(condition.getStatus()),         // 상태 조건
-                        company.deletedAt.isNull()               // 삭제되지 않은 회사만 조회
+                        statusEq(condition.getStatus())          // 상태 조건
+                        // 모든 상태의 회사 조회 (삭제된 회사 포함)
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -42,8 +42,8 @@ public class CompanyRepositoryImpl implements CompanyRepositoryCustom {
                 .from(company)
                 .where(
                         keywordContains(condition.getKeyword()),
-                        statusEq(condition.getStatus()),
-                        company.deletedAt.isNull()
+                        statusEq(condition.getStatus())
+                        // 모든 상태의 회사 조회 (삭제된 회사 포함)
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -51,10 +51,12 @@ public class CompanyRepositoryImpl implements CompanyRepositoryCustom {
 
     // --- 동적 쿼리 조건 메서드들 ---
 
-    // 키워드 검색 (회사명 OR 사업자번호 포함)
+    // 키워드 검색 (회사명 OR 사업자번호 OR 대표자 포함)
     private BooleanExpression keywordContains(String keyword) {
         return StringUtils.hasText(keyword)
-                ? company.name.contains(keyword).or(company.businessNumber.contains(keyword))
+                ? company.name.contains(keyword)
+                    .or(company.businessNumber.contains(keyword))
+                    .or(company.representative.contains(keyword))
                 : null;
     }
 

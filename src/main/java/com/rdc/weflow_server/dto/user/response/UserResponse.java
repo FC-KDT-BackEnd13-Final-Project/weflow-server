@@ -29,6 +29,7 @@ public class UserResponse {
     // 메타 정보 (관리자 히스토리용)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
 
     // Entity → DTO 변환 메서드
     public static UserResponse from(User user) {
@@ -45,6 +46,7 @@ public class UserResponse {
                 .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .deletedAt(user.getDeletedAt())
                 .build();
     }
 }

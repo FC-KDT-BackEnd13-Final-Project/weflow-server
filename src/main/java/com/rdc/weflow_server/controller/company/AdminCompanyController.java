@@ -102,4 +102,22 @@ public class AdminCompanyController {
         );
         return ApiResponse.success("회사 삭제 성공", null);
     }
+
+    /**
+     * 회사 복구 (관리자 전용)
+     * PATCH /api/admin/companies/{companyId}/restore
+     */
+    @PatchMapping("/{companyId}/restore")
+    public ApiResponse<CompanyResponse> restoreCompany(
+            @PathVariable Long companyId,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest
+    ) {
+        CompanyResponse response = companyService.restoreCompany(
+                companyId,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
+        return ApiResponse.success("회사 복구 성공", response);
+    }
 }

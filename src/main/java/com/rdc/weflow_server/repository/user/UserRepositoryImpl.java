@@ -29,8 +29,8 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 .where(
                         keywordContains(condition.getKeyword()), // 검색어 조건
                         roleEq(condition.getRole()),             // 역할 조건
-                        companyIdEq(condition.getCompanyId()),   // 회사 조건
-                        user.deletedAt.isNull()                  // 삭제되지 않은 회원만 조회
+                        companyIdEq(condition.getCompanyId())    // 회사 조건
+                        // 모든 상태의 회원 조회 (삭제된 회원 포함)
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -44,8 +44,8 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 .where(
                         keywordContains(condition.getKeyword()),
                         roleEq(condition.getRole()),
-                        companyIdEq(condition.getCompanyId()),
-                        user.deletedAt.isNull()
+                        companyIdEq(condition.getCompanyId())
+                        // 모든 상태의 회원 조회 (삭제된 회원 포함)
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);

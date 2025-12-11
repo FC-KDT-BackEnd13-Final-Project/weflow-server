@@ -4,6 +4,7 @@ import com.rdc.weflow_server.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Builder
@@ -43,11 +44,12 @@ public class Company extends BaseEntity {
     // 회사 정보 수정 메서드
     public void updateCompany(String name, String businessNumber, String representative, String email, String address, String memo, CompanyStatus status) {
         if (name != null) this.name = name;
-        if (businessNumber != null) this.businessNumber = businessNumber;
-        if (representative != null) this.representative = representative;
-        if (email != null) this.email = email;
-        if (address != null) this.address = address;
-        if (memo != null) this.memo = memo;
+        // 빈 문자열은 null로 변환 (unique 제약 조건 때문)
+        if (businessNumber != null) this.businessNumber = StringUtils.hasText(businessNumber) ? businessNumber : null;
+        if (representative != null) this.representative = StringUtils.hasText(representative) ? representative : null;
+        if (email != null) this.email = StringUtils.hasText(email) ? email : null;
+        if (address != null) this.address = StringUtils.hasText(address) ? address : null;
+        if (memo != null) this.memo = StringUtils.hasText(memo) ? memo : null;
         if (status != null) this.status = status;
     }
 
@@ -59,5 +61,16 @@ public class Company extends BaseEntity {
     public void delete() {
         this.softDelete(); // BaseEntity의 메서드
         this.status = CompanyStatus.INACTIVE; // 상태 변경
+    }
+
+    /**
+     * [관리자] 회사 복구
+     * - 삭제 취소 (deletedAt = null)
+     * - 상태를 ACTIVE로 변경
+     */
+    @Override
+    public void restore() {
+        super.restore(); // BaseEntity의 restore() 메서드 호출 (deletedAt = null)
+        this.status = CompanyStatus.ACTIVE; // 상태 복구
     }
 }

@@ -21,6 +21,7 @@ public class CompanyResponse {
     private CompanyStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
 
     // Entity -> DTO 변환
     public static CompanyResponse from(Company company) {
@@ -35,6 +36,7 @@ public class CompanyResponse {
                 .status(company.getStatus())
                 .createdAt(company.getCreatedAt())
                 .updatedAt(company.getUpdatedAt())
+                .deletedAt(company.getDeletedAt())
                 .build();
     }
 }

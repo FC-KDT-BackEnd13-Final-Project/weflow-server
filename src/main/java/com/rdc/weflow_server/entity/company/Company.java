@@ -41,8 +41,12 @@ public class Company extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private CompanyStatus status;
 
+    @Column(length = 20)
+    @Enumerated(EnumType.STRING)
+    private CompanyType companyType;  // nullable initially for migration
+
     // 회사 정보 수정 메서드
-    public void updateCompany(String name, String businessNumber, String representative, String email, String address, String memo, CompanyStatus status) {
+    public void updateCompany(String name, String businessNumber, String representative, String email, String address, String memo, CompanyStatus status, CompanyType companyType) {
         if (name != null) this.name = name;
         // 빈 문자열은 null로 변환 (unique 제약 조건 때문)
         if (businessNumber != null) this.businessNumber = StringUtils.hasText(businessNumber) ? businessNumber : null;
@@ -51,6 +55,7 @@ public class Company extends BaseEntity {
         if (address != null) this.address = StringUtils.hasText(address) ? address : null;
         if (memo != null) this.memo = StringUtils.hasText(memo) ? memo : null;
         if (status != null) this.status = status;
+        if (companyType != null) this.companyType = companyType;
     }
 
     /**

@@ -108,4 +108,14 @@ public class User extends BaseEntity {
         super.restore(); // BaseEntity의 restore() 메서드 호출 (deletedAt = null)
         this.status = UserStatus.ACTIVE; // 상태 복구
     }
+
+    /**
+     * [관리자] 비밀번호 강제 재설정
+     * - 관리자가 회원의 비밀번호를 강제로 재설정합니다.
+     * - isTemporaryPassword를 true로 설정하여 다음 로그인 시 비밀번호 변경을 유도합니다.
+     */
+    public void resetPasswordByAdmin(String encodedPassword) {
+        this.password = encodedPassword;
+        this.isTemporaryPassword = true;  // 임시 비밀번호로 설정
+    }
 }

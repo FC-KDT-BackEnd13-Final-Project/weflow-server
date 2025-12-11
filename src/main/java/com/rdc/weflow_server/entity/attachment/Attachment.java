@@ -64,7 +64,8 @@ public class Attachment extends BaseEntity {
         STEP_REQUEST,
         STEP_REQUEST_ANSWER,
         SUPPORT,
-        SUPPORT_COMMENT
+        SUPPORT_COMMENT,
+        PROJECT_CONTRACT,
     }
 
     /** 첨부 타입: 파일 or 링크 */

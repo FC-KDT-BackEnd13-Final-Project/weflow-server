@@ -124,7 +124,8 @@ public class CompanyService {
                 request.getEmail(),
                 request.getAddress(),
                 request.getMemo(),
-                request.getStatus()
+                request.getStatus(),
+                request.getCompanyType()
         );
 
         // 4. 로그 기록

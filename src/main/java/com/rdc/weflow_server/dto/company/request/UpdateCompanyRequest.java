@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.dto.company.request;
 
 import com.rdc.weflow_server.entity.company.CompanyStatus;
+import com.rdc.weflow_server.entity.company.CompanyType;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,4 +19,5 @@ public class UpdateCompanyRequest {
     private String address;         // 주소
     private String memo;            // 메모
     private CompanyStatus status;   // 상태 (ACTIVE, INACTIVE)
+    private CompanyType companyType;  // 회사 유형 (AGENCY, CLIENT)
 }

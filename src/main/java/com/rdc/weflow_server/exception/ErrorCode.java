@@ -35,6 +35,7 @@ public enum ErrorCode {
     COMPANY_EMAIL_DUPLICATE(HttpStatus.CONFLICT, "COMPANY_003", "이미 등록된 이메일입니다."),
     COMPANY_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "COMPANY_004", "이미 삭제된 회사입니다."),
     COMPANY_NOT_DELETED(HttpStatus.BAD_REQUEST, "COMPANY_005", "삭제되지 않은 회사입니다."),
+    COMPANY_TYPE_NOT_SET(HttpStatus.BAD_REQUEST, "COMPANY_006", "회사 유형이 설정되지 않았습니다. 회사 정보를 수정하여 유형을 설정해주세요."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "회원을 찾을 수 없습니다."),
@@ -45,6 +46,7 @@ public enum ErrorCode {
     USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_006", "이미 삭제된 회원입니다."),
     SYSTEM_ADMIN_MINIMUM_REQUIRED(HttpStatus.FORBIDDEN, "USER_007", "최소 1명 이상의 시스템 관리자가 필요합니다."),
     USER_NOT_DELETED(HttpStatus.BAD_REQUEST, "USER_008", "삭제되지 않은 회원입니다."),
+    USER_ROLE_COMPANY_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "USER_009", "사용자 역할이 회사 유형과 일치하지 않습니다. AGENCY 회사는 AGENCY 역할만, CLIENT 회사는 CLIENT 역할만 가능합니다."),
 
     // Auth
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_001", "이메일 또는 비밀번호가 일치하지 않습니다."),

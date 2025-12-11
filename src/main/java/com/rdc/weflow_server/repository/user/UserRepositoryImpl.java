@@ -5,6 +5,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rdc.weflow_server.dto.user.request.UserSearchCondition;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,8 +30,9 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 .where(
                         keywordContains(condition.getKeyword()), // 검색어 조건
                         roleEq(condition.getRole()),             // 역할 조건
-                        companyIdEq(condition.getCompanyId())    // 회사 조건
-                        // 모든 상태의 회원 조회 (삭제된 회원 포함)
+                        statusEq(condition.getStatus()),         // 상태 조건
+                        companyIdEq(condition.getCompanyId()),   // 회사 조건
+                        excludeSystemAdmin()                     // SYSTEM_ADMIN 제외
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -44,8 +46,9 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 .where(
                         keywordContains(condition.getKeyword()),
                         roleEq(condition.getRole()),
-                        companyIdEq(condition.getCompanyId())
-                        // 모든 상태의 회원 조회 (삭제된 회원 포함)
+                        statusEq(condition.getStatus()),
+                        companyIdEq(condition.getCompanyId()),
+                        excludeSystemAdmin()                     // SYSTEM_ADMIN 제외
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -65,8 +68,18 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
         return role != null ? user.role.eq(role) : null;
     }
 
+    // 상태 필터
+    private BooleanExpression statusEq(com.rdc.weflow_server.entity.user.UserStatus status) {
+        return status != null ? user.status.eq(status) : null;
+    }
+
     // 회사 ID 필터
     private BooleanExpression companyIdEq(Long companyId) {
         return companyId != null ? user.company.id.eq(companyId) : null;
+    }
+
+    // SYSTEM_ADMIN 제외 (회원 관리 페이지용)
+    private BooleanExpression excludeSystemAdmin() {
+        return user.role.ne(UserRole.SYSTEM_ADMIN);
     }
 }

@@ -2,6 +2,7 @@ package com.rdc.weflow_server.dto.company.response;
 
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.company.CompanyStatus;
+import com.rdc.weflow_server.entity.company.CompanyType;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -19,6 +20,7 @@ public class CompanyResponse {
     private String address;
     private String memo;
     private CompanyStatus status;
+    private CompanyType companyType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -34,6 +36,7 @@ public class CompanyResponse {
                 .address(company.getAddress())
                 .memo(company.getMemo())
                 .status(company.getStatus())
+                .companyType(company.getCompanyType())
                 .createdAt(company.getCreatedAt())
                 .updatedAt(company.getUpdatedAt())
                 .deletedAt(company.getDeletedAt())

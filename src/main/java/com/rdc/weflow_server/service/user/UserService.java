@@ -3,9 +3,11 @@ package com.rdc.weflow_server.service.user;
 import com.rdc.weflow_server.dto.user.request.*;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
 import com.rdc.weflow_server.entity.company.Company;
+import com.rdc.weflow_server.entity.company.CompanyType;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.company.CompanyRepository;
@@ -32,6 +34,35 @@ public class UserService {
     private final ActivityLogService activityLogService;
 
     /**
+     * 사용자 역할과 회사 유형 일치 검증
+     */
+    private void validateRoleCompanyTypeMatch(UserRole role, Company company) {
+        // SYSTEM_ADMIN은 회사가 없어도 됨
+        if (role == UserRole.SYSTEM_ADMIN) {
+            return;
+        }
+
+        // AGENCY, CLIENT는 회사 필수
+        if (company == null) {
+            throw new BusinessException(ErrorCode.COMPANY_NOT_FOUND);
+        }
+
+        // 회사 유형이 설정되지 않은 경우 에러
+        if (company.getCompanyType() == null) {
+            throw new BusinessException(ErrorCode.COMPANY_TYPE_NOT_SET);
+        }
+
+        // 역할과 회사 유형 매칭 검증
+        if (role == UserRole.AGENCY && company.getCompanyType() != CompanyType.AGENCY) {
+            throw new BusinessException(ErrorCode.USER_ROLE_COMPANY_TYPE_MISMATCH);
+        }
+
+        if (role == UserRole.CLIENT && company.getCompanyType() != CompanyType.CLIENT) {
+            throw new BusinessException(ErrorCode.USER_ROLE_COMPANY_TYPE_MISMATCH);
+        }
+    }
+
+    /**
      * 관리자 - 회원 생성
      * POST /api/admin/users
      */
@@ -41,7 +72,10 @@ public class UserService {
         Company company = companyRepository.findById(request.getCompanyId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
 
-        // 2. 이메일 중복 체크
+        // 2. 역할과 회사 유형 일치 검증
+        validateRoleCompanyTypeMatch(request.getRole(), company);
+
+        // 3. 이메일 중복 체크
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(ErrorCode.USER_EMAIL_DUPLICATE);
         }
@@ -212,7 +246,12 @@ public class UserService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
         }
 
-        // 4. 정보 수정 (관리자용 메서드 호출)
+        // 4. 역할과 회사 유형 일치 검증
+        UserRole roleToValidate = request.getRole() != null ? request.getRole() : user.getRole();
+        Company companyToValidate = request.getCompanyId() != null ? company : user.getCompany();
+        validateRoleCompanyTypeMatch(roleToValidate, companyToValidate);
+
+        // 5. 정보 수정 (관리자용 메서드 호출)
         user.updateByAdmin(
                 request.getName(),
                 request.getPhoneNumber(),
@@ -289,6 +328,41 @@ public class UserService {
                 ipAddress
         );
 
+        return UserResponse.from(user);
+    }
+
+    /**
+     * 관리자 - 회원 비밀번호 강제 재설정
+     * PATCH /api/admin/users/{userId}/reset-password
+     */
+    @Transactional
+    public UserResponse resetPasswordByAdmin(Long userId, String newPassword, Long adminId, String ipAddress) {
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 삭제된 사용자 체크
+        if (user.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_DELETED);
+        }
+
+        // 3. 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(newPassword);
+
+        // 4. 비밀번호 강제 재설정 (임시 비밀번호로 설정)
+        user.resetPasswordByAdmin(encodedPassword);
+
+        // 5. 로그 기록 (관리자가 비밀번호 재설정)
+        activityLogService.createLog(
+                ActionType.UPDATE,
+                TargetTable.USER,
+                userId,
+                adminId,
+                null,
+                ipAddress
+        );
+
+        // 6. Entity → Response 변환
         return UserResponse.from(user);
     }
 }

@@ -2,8 +2,10 @@ package com.rdc.weflow_server.dto.company.request;
 
 import com.rdc.weflow_server.entity.company.Company;
 import com.rdc.weflow_server.entity.company.CompanyStatus;
+import com.rdc.weflow_server.entity.company.CompanyType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,6 +32,9 @@ public class CreateCompanyRequest {
 
     private String memo;  // 메모 (선택)
 
+    @NotNull(message = "회사 유형은 필수입니다")
+    private CompanyType companyType;  // 회사 유형 (필수)
+
     // DTO -> Entity 변환 메서드
     public Company toEntity() {
         return Company.builder()
@@ -40,6 +45,7 @@ public class CreateCompanyRequest {
                 .address(StringUtils.hasText(this.address) ? this.address : null)
                 .memo(StringUtils.hasText(this.memo) ? this.memo : null)
                 .status(CompanyStatus.ACTIVE)
+                .companyType(this.companyType)
                 .build();
     }
 }

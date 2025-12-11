@@ -3,6 +3,7 @@ package com.rdc.weflow_server.controller.user;
 import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.user.request.CreateUserRequest;
+import com.rdc.weflow_server.dto.user.request.ResetPasswordAdminRequest;
 import com.rdc.weflow_server.dto.user.request.UpdateUserAdminRequest;
 import com.rdc.weflow_server.dto.user.request.UserSearchCondition;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
@@ -129,5 +130,25 @@ public class AdminUserController {
                 servletRequest.getRemoteAddr()
         );
         return ApiResponse.success("회원 복구 성공", response);
+    }
+
+    /**
+     * 회원 비밀번호 강제 재설정 (관리자 전용)
+     * PATCH /api/admin/users/{userId}/reset-password
+     */
+    @PatchMapping("/{userId}/reset-password")
+    public ApiResponse<UserResponse> resetPassword(
+            @PathVariable Long userId,
+            @RequestBody @Valid ResetPasswordAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest) {
+
+        UserResponse response = userService.resetPasswordByAdmin(
+                userId,
+                request.getNewPassword(),
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
+        return ApiResponse.success("비밀번호가 재설정되었습니다. 회원은 다음 로그인 시 비밀번호 변경이 필요합니다.", response);
     }
 }

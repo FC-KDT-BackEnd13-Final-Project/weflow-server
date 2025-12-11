@@ -23,6 +23,8 @@ public interface StepRepository extends JpaRepository<Step, Long> {
 
     @Query("select max(s.orderIndex) from Step s where s.project.id = :projectId and s.phase = :phase and s.deletedAt is null")
     Integer findMaxOrderIndexByProjectIdAndPhase(Long projectId, ProjectStatus phase);
+    @Query("select max(s.orderIndex) from Step s where s.project.id = :projectId and s.deletedAt is null")
+    Integer findMaxOrderIndexByProjectId(Long projectId);
 
     List<Step> findByProject_IdAndIdInAndDeletedAtIsNull(Long projectId, Collection<Long> stepIds);
 
@@ -31,6 +33,7 @@ public interface StepRepository extends JpaRepository<Step, Long> {
     boolean existsByProject_IdAndTitleIgnoreCaseAndIdNotAndDeletedAtIsNull(Long projectId, String title, Long id);
 
     boolean existsByProject_IdAndPhaseAndOrderIndexAndDeletedAtIsNull(Long projectId, ProjectStatus phase, Integer orderIndex);
+    boolean existsByProject_IdAndOrderIndexAndDeletedAtIsNull(Long projectId, Integer orderIndex);
 
     Optional<Step> findByIdAndDeletedAtIsNull(Long id);
     List<Step> findByProjectIdOrderByOrderIndexAsc(Long projectId);

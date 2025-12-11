@@ -1,7 +1,9 @@
 package com.rdc.weflow_server.service.step;
 
+import com.rdc.weflow_server.dto.attachment.AttachmentSimpleResponse;
 import com.rdc.weflow_server.dto.step.StepRequestAnswerCreateRequest;
 import com.rdc.weflow_server.dto.step.StepRequestAnswerResponse;
+import com.rdc.weflow_server.entity.attachment.Attachment;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.notification.NotificationType;
@@ -14,6 +16,7 @@ import com.rdc.weflow_server.entity.user.User;
 import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
+import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
@@ -21,12 +24,14 @@ import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.log.AuditContext;
+import com.rdc.weflow_server.service.file.S3FileService;
 import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +41,13 @@ public class StepRequestAnswerService {
     private final StepRequestRepository stepRequestRepository;
     private final StepRequestAnswerRepository stepRequestAnswerRepository;
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
+    private final AttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final StepRequestService stepRequestService;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
+    private final S3FileService s3FileService;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, AuditContext ctx, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -80,8 +87,7 @@ public class StepRequestAnswerService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        stepRequestAnswerRepository.findByStepRequest_Id(requestId)
-                .ifPresent(existing -> { throw new BusinessException(ErrorCode.STEP_ANSWER_ALREADY_EXISTS); });
+        clearExistingAnswer(requestId);
 
         StepRequestStatus newStatus = mapAnswerToStatus(request.getResponse());
         StepRequestAnswer answer = StepRequestAnswer.builder()
@@ -98,6 +104,8 @@ public class StepRequestAnswerService {
         stepRequestService.updateStepStatusBasedOnRequests(stepRequest.getStep());
 
         StepRequestAnswer saved = stepRequestAnswerRepository.save(answer);
+        syncAnswerFiles(saved, toFilePayloads(request.getFiles()));
+        syncAnswerLinks(saved, toLinkPayloads(request.getLinks()));
         // REASON_UPDATE: 반려/승인 사유 afterContent 기록
         saveReasonHistory(stepRequest, request.getReasonText(), user);
         activityLogService.createLog(
@@ -131,6 +139,7 @@ public class StepRequestAnswerService {
                 .respondedBy(answer.getRespondedBy() != null ? answer.getRespondedBy().getId() : null)
                 .respondedByName(answer.getRespondedBy() != null ? answer.getRespondedBy().getName() : null)
                 .reasonText(answer.getReasonText())
+                .attachments(getAttachments(answer))
                 .decidedAt(answer.getStepRequest() != null ? answer.getStepRequest().getDecidedAt() : null)
                 .createdAt(answer.getCreatedAt())
                 .build();
@@ -168,6 +177,134 @@ public class StepRequestAnswerService {
                 .updatedBy(updatedBy)
                 .build();
         stepRequestHistoryRepository.save(history);
+    }
+
+    private void syncAnswerFiles(StepRequestAnswer answer, List<SimpleFilePayload> files) {
+        if (files == null) {
+            return;
+        }
+
+        attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST_ANSWER,
+                answer.getId(),
+                Attachment.AttachmentType.FILE
+        );
+
+        if (files.isEmpty()) {
+            return;
+        }
+
+        for (SimpleFilePayload file : files) {
+            validateFilePayload(file);
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST_ANSWER)
+                    .targetId(answer.getId())
+                    .attachmentType(Attachment.AttachmentType.FILE)
+                    .fileName(file.fileName())
+                    .fileSize(file.fileSize())
+                    .filePath(file.filePath())
+                    .contentType(file.contentType())
+                    .build();
+            attachmentRepository.save(attachment);
+        }
+    }
+
+    private void syncAnswerLinks(StepRequestAnswer answer, List<SimpleLinkPayload> links) {
+        if (links == null) {
+            return;
+        }
+
+        attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST_ANSWER,
+                answer.getId(),
+                Attachment.AttachmentType.LINK
+        );
+
+        if (links.isEmpty()) {
+            return;
+        }
+
+        for (SimpleLinkPayload link : links) {
+            validateLinkPayload(link);
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST_ANSWER)
+                    .targetId(answer.getId())
+                    .attachmentType(Attachment.AttachmentType.LINK)
+                    .url(link.url())
+                    .build();
+            attachmentRepository.save(attachment);
+        }
+    }
+
+    private List<AttachmentSimpleResponse> getAttachments(StepRequestAnswer answer) {
+        List<Attachment> attachments = attachmentRepository.findByTargetTypeAndTargetId(
+                Attachment.TargetType.STEP_REQUEST_ANSWER,
+                answer.getId()
+        );
+        return attachments.stream()
+                .map(this::toAttachmentSimpleResponse)
+                .toList();
+    }
+
+    private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {
+        String url = attachment.getAttachmentType() == Attachment.AttachmentType.FILE && attachment.getFilePath() != null
+                ? s3FileService.generateDownloadPresignedUrl(attachment.getFilePath(), attachment.getFileName())
+                : attachment.getUrl();
+        return AttachmentSimpleResponse.from(attachment, url);
+    }
+
+    private List<SimpleFilePayload> toFilePayloads(List<StepRequestAnswerCreateRequest.FileRequest> files) {
+        if (files == null) {
+            return null;
+        }
+        return files.stream()
+                .map(f -> new SimpleFilePayload(f.getFileName(), f.getFileSize(), f.getFilePath(), f.getContentType()))
+                .toList();
+    }
+
+    private List<SimpleLinkPayload> toLinkPayloads(List<StepRequestAnswerCreateRequest.LinkRequest> links) {
+        if (links == null) {
+            return null;
+        }
+        return links.stream()
+                .map(l -> new SimpleLinkPayload(l.getUrl()))
+                .toList();
+    }
+
+    private record SimpleFilePayload(String fileName, Long fileSize, String filePath, String contentType) {}
+
+    private record SimpleLinkPayload(String url) {}
+
+    private void validateFilePayload(SimpleFilePayload file) {
+        if (file == null || file.filePath() == null || file.filePath().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (file.filePath().startsWith("http://") || file.filePath().startsWith("https://")) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (file.filePath().length() > 500) { // DB 컬럼 길이
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    private void validateLinkPayload(SimpleLinkPayload link) {
+        if (link == null || link.url() == null || link.url().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (!(link.url().startsWith("http://") || link.url().startsWith("https://"))) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    private void clearExistingAnswer(Long requestId) {
+        stepRequestAnswerRepository.findByStepRequest_Id(requestId)
+                .ifPresent(existing -> {
+                    attachmentRepository.deleteByTargetTypeAndTargetId(
+                            Attachment.TargetType.STEP_REQUEST_ANSWER,
+                            existing.getId()
+                    );
+                    stepRequestAnswerRepository.delete(existing);
+                });
     }
 
     private void notifyRequesterDecision(StepRequest stepRequest, StepRequestAnswer answer) {

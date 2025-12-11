@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.URL;
 
@@ -19,7 +18,25 @@ public class StepRequestCreateRequest {
     private String title;
     private String description;
     @Size(max = 50)
-    private List<Long> attachmentIds;
+    private List<FileRequest> files;
     @Size(max = 50)
-    private List<@URL String> links;
+    private List<LinkRequest> links;
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FileRequest {
+        private String fileName;
+        private Long fileSize;
+        private String filePath;
+        private String contentType;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkRequest {
+        @URL
+        private String url;
+    }
 }

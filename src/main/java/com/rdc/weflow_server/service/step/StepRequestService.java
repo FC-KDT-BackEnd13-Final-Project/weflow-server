@@ -24,6 +24,7 @@ import com.rdc.weflow_server.service.notification.NotificationService;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
+import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +57,7 @@ public class StepRequestService {
     private final S3FileService s3FileService;
     private final NotificationService notificationService;
     private final StepRepository stepRepository;
+    private final StepRequestAnswerRepository stepRequestAnswerRepository;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
@@ -93,8 +96,8 @@ public class StepRequestService {
                 .build();
 
         StepRequest saved = stepRequestRepository.save(stepRequest);
-        attachFiles(saved, request.getAttachmentIds(), ctx);
-        attachLinks(saved, request.getLinks(), ctx);
+        syncRequestFiles(saved, toFilePayloads(request.getFiles()), ctx);
+        syncRequestLinks(saved, toLinkPayloads(request.getLinks()), ctx);
 
         // 단계 상태를 승인 대기로 변경 (기존이 아니면)
         if (step.getStatus() != StepStatus.WAITING_APPROVAL) {
@@ -157,13 +160,22 @@ public class StepRequestService {
         }
 
         // 파일 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
-        if (request.getAttachmentIds() != null) {
-            replaceFiles(stepRequest, request.getAttachmentIds(), ctx);
+        if (request.getFiles() != null) {
+            syncRequestFiles(stepRequest, toFilePayloads(request.getFiles()), ctx);
         }
 
         // 링크 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
         if (request.getLinks() != null) {
-            replaceLinks(stepRequest, request.getLinks(), ctx);
+            syncRequestLinks(stepRequest, toLinkPayloads(request.getLinks()), ctx);
+        }
+
+        // CHANGE_REQUESTED -> REQUESTED 재요청 전이
+        if (stepRequest.getStatus() == StepRequestStatus.CHANGE_REQUESTED) {
+            clearExistingAnswer(stepRequest);
+            stepRequest.updateStatus(StepRequestStatus.REQUESTED);
+            stepRequest.updateDecidedAt(null);
+            stepRequest.updateDecidedBy(null);
+            saveHistory(stepRequest, HistoryType.REQUEST_UPDATE, "status", StepRequestStatus.CHANGE_REQUESTED.name(), StepRequestStatus.REQUESTED.name(), user);
         }
 
         // 수정 이력 기록
@@ -177,6 +189,7 @@ public class StepRequestService {
                 step.getProject().getId(),
                 ctx.ipAddress()
         );
+        updateStepStatusBasedOnRequests(step);
         notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), stepRequest.getRequestTitle());
         return toResponse(stepRequest);
     }
@@ -283,76 +296,31 @@ public class StepRequestService {
         notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), "승인 요청이 취소되었습니다.");
     }
 
-    private void attachFiles(StepRequest stepRequest, List<Long> attachmentIds, AuditContext ctx) {
-        if (attachmentIds == null || attachmentIds.isEmpty()) {
+    private void syncRequestFiles(StepRequest stepRequest, List<SimpleFilePayload> files, AuditContext ctx) {
+        if (files == null) {
             return;
         }
 
-        List<Attachment> attachments = attachmentRepository.findAllById(attachmentIds);
-        if (attachments.size() != attachmentIds.size()) {
-            throw new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND);
-        }
+        attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST,
+                stepRequest.getId(),
+                Attachment.AttachmentType.FILE
+        );
 
-        for (Attachment attachment : attachments) {
-            if (attachment.getTargetType() != Attachment.TargetType.STEP_REQUEST) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-            }
-            if (attachment.getTargetId() != null && !attachment.getTargetId().equals(stepRequest.getId())) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-            }
-            attachment.bindTo(Attachment.TargetType.STEP_REQUEST, stepRequest.getId());
-            activityLogService.createLog(
-                    ActionType.UPLOAD,
-                    TargetTable.ATTACHMENT,
-                    attachment.getId(),
-                    ctx.userId(),
-                    stepRequest.getStep().getProject().getId(),
-                    ctx.ipAddress()
-            );
-        }
-    }
-
-    private void attachLinks(StepRequest stepRequest, List<String> links, AuditContext ctx) {
-        if (links == null) {
-            return;
-        }
-        if (links.isEmpty()) {
-        List<Attachment> existingLinks = attachmentRepository.findByTargetTypeAndTargetId(
-                        Attachment.TargetType.STEP_REQUEST,
-                        stepRequest.getId())
-                .stream()
-                .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.LINK)
-                .toList();
-        if (!existingLinks.isEmpty()) {
-            attachmentRepository.deleteAll(existingLinks);
-            for (Attachment link : existingLinks) {
-                activityLogService.createLog(
-                        ActionType.REMOVE,
-                        TargetTable.ATTACHMENT,
-                        link.getId(),
-                        ctx.userId(),
-                        stepRequest.getStep().getProject().getId(),
-                        ctx.ipAddress()
-                );
-            }
-            activityLogService.createLog(
-                    ActionType.REMOVE,
-                    TargetTable.STEP_REQUEST,
-                    stepRequest.getId(),
-                    ctx.userId(),
-                    stepRequest.getStep().getProject().getId(),
-                    ctx.ipAddress()
-            );
-        }
+        if (files.isEmpty()) {
             return;
         }
 
-        for (String link : links) {
+        for (SimpleFilePayload file : files) {
+            validateFilePayload(file);
             Attachment attachment = Attachment.builder()
                     .targetType(Attachment.TargetType.STEP_REQUEST)
                     .targetId(stepRequest.getId())
-                    .attachmentType(Attachment.AttachmentType.LINK)
-                    .url(link)
+                    .attachmentType(Attachment.AttachmentType.FILE)
+                    .fileName(file.fileName())
+                    .fileSize(file.fileSize())
+                    .filePath(file.filePath())
+                    .contentType(file.contentType())
                     .build();
             attachmentRepository.save(attachment);
             activityLogService.createLog(
@@ -366,32 +334,39 @@ public class StepRequestService {
         }
     }
 
-    private void replaceFiles(StepRequest stepRequest, List<Long> incomingIds, AuditContext ctx) {
-        List<Attachment> existing = attachmentRepository.findByTargetTypeAndTargetId(Attachment.TargetType.STEP_REQUEST, stepRequest.getId())
-                .stream()
-                .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.FILE)
-                .collect(Collectors.toList());
+    private void syncRequestLinks(StepRequest stepRequest, List<SimpleLinkPayload> links, AuditContext ctx) {
+        if (links == null) {
+            return;
+        }
 
-        // 제거 대상: 기존 파일 중 incomingIds에 없는 것들
-        existing.stream()
-                .filter(a -> !incomingIds.contains(a.getId()))
-                .forEach(a -> {
-                    attachmentRepository.delete(a);
-                    activityLogService.createLog(
-                            ActionType.REMOVE,
-                            TargetTable.ATTACHMENT,
-                            a.getId(),
-                            ctx.userId(),
-                            stepRequest.getStep().getProject().getId(),
-                            ctx.ipAddress()
-                    );
-                });
+        attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                Attachment.TargetType.STEP_REQUEST,
+                stepRequest.getId(),
+                Attachment.AttachmentType.LINK
+        );
 
-        attachFiles(stepRequest, incomingIds, ctx);
-    }
+        if (links.isEmpty()) {
+            return;
+        }
 
-    private void replaceLinks(StepRequest stepRequest, List<String> links, AuditContext ctx) {
-        attachLinks(stepRequest, links, ctx);
+        for (SimpleLinkPayload link : links) {
+            validateLinkPayload(link);
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST)
+                    .targetId(stepRequest.getId())
+                    .attachmentType(Attachment.AttachmentType.LINK)
+                    .url(link.url())
+                    .build();
+            attachmentRepository.save(attachment);
+            activityLogService.createLog(
+                    ActionType.UPLOAD,
+                    TargetTable.ATTACHMENT,
+                    attachment.getId(),
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
+            );
+        }
     }
 
     private StepRequestResponse toResponse(StepRequest stepRequest) {
@@ -557,6 +532,66 @@ public class StepRequestService {
         step.updateStatus(StepStatus.PENDING);
     }
 
+    private List<SimpleFilePayload> toFilePayloads(List<?> files) {
+        if (files == null) {
+            return null;
+        }
+        return files.stream()
+                .flatMap(f -> {
+                    if (f instanceof StepRequestCreateRequest.FileRequest fr) {
+                        return Stream.of(new SimpleFilePayload(fr.getFileName(), fr.getFileSize(), fr.getFilePath(), fr.getContentType()));
+                    }
+                    if (f instanceof StepRequestUpdateRequest.FileRequest fr) {
+                        return Stream.of(new SimpleFilePayload(fr.getFileName(), fr.getFileSize(), fr.getFilePath(), fr.getContentType()));
+                    }
+                    return Stream.empty();
+                })
+                .toList();
+    }
+
+    private List<SimpleLinkPayload> toLinkPayloads(List<?> links) {
+        if (links == null) {
+            return null;
+        }
+        return links.stream()
+                .flatMap(l -> {
+                    if (l instanceof StepRequestCreateRequest.LinkRequest lr) {
+                        return Stream.of(new SimpleLinkPayload(lr.getUrl()));
+                    }
+                    if (l instanceof StepRequestUpdateRequest.LinkRequest lr) {
+                        return Stream.of(new SimpleLinkPayload(lr.getUrl()));
+                    }
+                    return Stream.empty();
+                })
+                .toList();
+    }
+
+    private record SimpleFilePayload(String fileName, Long fileSize, String filePath, String contentType) {}
+
+    private record SimpleLinkPayload(String url) {}
+
+    private void validateFilePayload(SimpleFilePayload file) {
+        if (file == null || file.filePath() == null || file.filePath().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (file.filePath().startsWith("http://") || file.filePath().startsWith("https://")) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        // DB 컬럼 길이 고려
+        if (file.filePath().length() > 500) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    private void validateLinkPayload(SimpleLinkPayload link) {
+        if (link == null || link.url() == null || link.url().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (!(link.url().startsWith("http://") || link.url().startsWith("https://"))) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
     private String toRequestContent(StepRequestCreateRequest request) {
         // 단순 문자열 직렬화 (추후 JSON 포맷 필요 시 교체)
         return String.format("title=%s;description=%s", request.getTitle(), request.getDescription());
@@ -564,5 +599,20 @@ public class StepRequestService {
 
     private String toRequestContent(String title, String description) {
         return String.format("title=%s;description=%s", title, description);
+    }
+
+    private void clearExistingAnswer(StepRequest stepRequest) {
+        if (stepRequest == null || stepRequest.getId() == null) {
+            return;
+        }
+
+        stepRequestAnswerRepository.findByStepRequest_Id(stepRequest.getId())
+                .ifPresent(answer -> {
+                    attachmentRepository.deleteByTargetTypeAndTargetId(
+                            Attachment.TargetType.STEP_REQUEST_ANSWER,
+                            answer.getId()
+                    );
+                    stepRequestAnswerRepository.delete(answer);
+                });
     }
 }

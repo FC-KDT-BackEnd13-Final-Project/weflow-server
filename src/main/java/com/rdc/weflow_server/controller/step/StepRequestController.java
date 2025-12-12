@@ -39,16 +39,18 @@ public class StepRequestController {
     @GetMapping("/steps/{stepId}/requests")
     public ApiResponse<StepRequestListResponse> getRequestsByStep(@PathVariable Long stepId,
                                                                   @RequestParam(defaultValue = "0") int page,
-                                                                  @RequestParam(defaultValue = "20") int size) {
-        StepRequestListResponse response = stepRequestService.getRequestsByStep(stepId, page, size);
+                                                                  @RequestParam(defaultValue = "20") int size,
+                                                                  @AuthenticationPrincipal CustomUserDetails user) {
+        StepRequestListResponse response = stepRequestService.getRequestsByStep(stepId, page, size, user);
         return ApiResponse.success("stepRequest.listByStep.success", response);
     }
 
     @GetMapping("/projects/{projectId}/requests")
     public ApiResponse<StepRequestListResponse> getRequestsByProject(@PathVariable Long projectId,
                                                                      @RequestParam(defaultValue = "0") int page,
-                                                                     @RequestParam(defaultValue = "20") int size) {
-        StepRequestListResponse response = stepRequestService.getRequestsByProject(projectId, page, size);
+                                                                     @RequestParam(defaultValue = "20") int size,
+                                                                     @AuthenticationPrincipal CustomUserDetails user) {
+        StepRequestListResponse response = stepRequestService.getRequestsByProject(projectId, page, size, user);
         return ApiResponse.success("stepRequest.listByProject.success", response);
     }
 

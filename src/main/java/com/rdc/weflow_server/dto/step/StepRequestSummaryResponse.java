@@ -1,5 +1,6 @@
 package com.rdc.weflow_server.dto.step;
 
+import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,7 @@ public class StepRequestSummaryResponse {
     private LocalDateTime decidedAt;
     private Long projectId;
     private String projectName;
+    private ProjectPhase phase;
     private Long stepId;
     private String stepTitle;
     private Long requestedBy;
@@ -35,6 +37,7 @@ public class StepRequestSummaryResponse {
                 .decidedAt(sr.getDecidedAt())
                 .projectId(sr.getStep().getProject().getId())
                 .projectName(sr.getStep().getProject().getName())
+                .phase(sr.getStep().getPhase())
                 .stepId(sr.getStep().getId())
                 .stepTitle(sr.getStep().getTitle())
                 .requestedBy(sr.getRequestedBy().getId())

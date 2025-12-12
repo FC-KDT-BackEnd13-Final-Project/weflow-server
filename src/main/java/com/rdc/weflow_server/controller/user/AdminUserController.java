@@ -6,6 +6,7 @@ import com.rdc.weflow_server.dto.user.request.CreateUserRequest;
 import com.rdc.weflow_server.dto.user.request.ResetPasswordAdminRequest;
 import com.rdc.weflow_server.dto.user.request.UpdateUserAdminRequest;
 import com.rdc.weflow_server.dto.user.request.UserSearchCondition;
+import com.rdc.weflow_server.dto.user.response.CsvUserBatchResponse;
 import com.rdc.weflow_server.dto.user.response.UserResponse;
 import com.rdc.weflow_server.service.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,8 +15,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,6 +28,16 @@ import java.util.List;
 public class AdminUserController {
 
     private final UserService userService;
+
+    /**
+     * 이메일 중복 체크 (일괄)
+     * POST /api/admin/users/check-emails
+     */
+    @PostMapping("/check-emails")
+    public ApiResponse<List<String>> checkDuplicateEmails(@RequestBody List<String> emails) {
+        List<String> duplicates = userService.checkDuplicateEmails(emails);
+        return ApiResponse.success("중복 검사 완료", duplicates);
+    }
 
     /**
      * 회원 생성 (관리자 전용)
@@ -60,6 +73,28 @@ public class AdminUserController {
                 servletRequest.getRemoteAddr()
         );
         return ApiResponse.success("회원 일괄 생성 성공", response);
+    }
+
+    /**
+     * CSV 파일을 통한 회원 일괄 생성
+     * POST /api/admin/users/batch/csv
+     */
+    @PostMapping(value = "/batch/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<CsvUserBatchResponse> createUsersBatchFromCsv(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("companyId") Long companyId,
+            @RequestParam("password") String password,
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest servletRequest) {
+
+        CsvUserBatchResponse response = userService.createUsersBatchFromCsv(
+                file,
+                companyId,
+                password,
+                user.getId(),
+                servletRequest.getRemoteAddr()
+        );
+        return ApiResponse.success("CSV 회원 일괄 등록 완료", response);
     }
 
     /**

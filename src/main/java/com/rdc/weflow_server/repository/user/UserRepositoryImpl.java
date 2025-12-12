@@ -54,6 +54,19 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    @Override
+    public List<String> findExistingEmails(List<String> emails) {
+        if (emails == null || emails.isEmpty()) {
+            return List.of();
+        }
+
+        return queryFactory
+                .select(user.email)
+                .from(user)
+                .where(user.email.in(emails))
+                .fetch();
+    }
+
     // --- 동적 쿼리 조건 메서드들 ---
 
     // 키워드 검색 (이름 OR 이메일 포함)

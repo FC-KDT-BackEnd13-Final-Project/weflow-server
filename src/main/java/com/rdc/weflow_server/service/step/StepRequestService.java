@@ -34,6 +34,7 @@ import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.file.S3FileService;
 import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
+import com.rdc.weflow_server.service.permission.StepRequestPermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -64,27 +65,14 @@ public class StepRequestService {
     private final StepRepository stepRepository;
     private final StepRequestAnswerRepository stepRequestAnswerRepository;
     private final ProjectRepository projectRepository;
+    private final StepRequestPermissionService stepRequestPermissionService;
 
     public StepRequestResponse createRequest(Long stepId, AuditContext ctx, StepRequestCreateRequest request) {
         Step step = stepService.getStepOrThrow(stepId);
         User user = userRepository.findById(ctx.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 시스템 관리자는 예외적으로 허용
-        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
-            // 개발사 소속인지 확인
-            if (user.getRole() != UserRole.AGENCY) {
-                throw new BusinessException(ErrorCode.FORBIDDEN);
-            }
-
-            // 프로젝트 활성 멤버인지 확인 (deletedAt 검사 포함)
-            boolean isActiveMember = projectMemberRepository.findByProjectIdAndUserId(step.getProject().getId(), ctx.userId())
-                    .filter(pm -> pm.getDeletedAt() == null)
-                    .isPresent();
-            if (!isActiveMember) {
-                throw new BusinessException(ErrorCode.FORBIDDEN);
-            }
-        }
+        stepRequestPermissionService.assertCanCreateRequest(user, step.getProject().getId());
 
         // 승인 완료된 단계에는 신규 요청 생성 불가
         if (step.getStatus() == StepStatus.APPROVED) {
@@ -142,17 +130,7 @@ public class StepRequestService {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
-        if (!stepRequest.getStatus().isEditable()) {
-            throw new BusinessException(ErrorCode.STEP_REQUEST_ALREADY_DECIDED);
-        }
-
-        boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
-        boolean isRequester = stepRequest.getRequestedBy() != null
-                && stepRequest.getRequestedBy().getId().equals(ctx.userId());
-
-        if (!isSystemAdmin && !isRequester) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        stepRequestPermissionService.assertCanUpdateRequest(user, stepRequest);
 
         // 제목/설명 업데이트
         if (request.getTitle() != null) {
@@ -202,10 +180,10 @@ public class StepRequestService {
 
     @Transactional(readOnly = true)
     public StepRequestListResponse getRequestsByStep(Long stepId, int page, int size, CustomUserDetails user) {
-        validateUser(user);
+        User currentUser = getUserOrThrow(user);
         // 삭제된 Step이면 조회도 404 처리
         Step step = stepService.getStepOrThrow(stepId);
-        validateProjectAccess(step.getProject().getId(), user);
+        stepRequestPermissionService.assertCanViewRequests(currentUser, step.getProject().getId());
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_IdOrderByCreatedAtDesc(stepId, pageable);
         List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
@@ -220,13 +198,13 @@ public class StepRequestService {
 
     @Transactional(readOnly = true)
     public StepRequestListResponse getRequestsByProject(Long projectId, int page, int size, CustomUserDetails user) {
-        validateUser(user);
+        User currentUser = getUserOrThrow(user);
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
         if (project.getDeletedAt() != null) {
             throw new BusinessException(ErrorCode.PROJECT_NOT_FOUND);
         }
-        validateProjectAccess(projectId, user);
+        stepRequestPermissionService.assertCanViewRequests(currentUser, projectId);
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var pageResult = stepRequestRepository.findByStep_Project_IdOrderByCreatedAtDesc(projectId, pageable);
         List<StepRequestSummaryResponse> summaries = toSummaries(pageResult.getContent());
@@ -269,18 +247,7 @@ public class StepRequestService {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
-        boolean isSystemAdmin = user.getRole() == UserRole.SYSTEM_ADMIN;
-        boolean isRequester = stepRequest.getRequestedBy() != null
-                && stepRequest.getRequestedBy().getId().equals(ctx.userId());
-
-        // 요청자 본인만 취소 가능 (시스템관리자는 예외 허용)
-        if (!isSystemAdmin && !isRequester) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
-            throw new BusinessException(ErrorCode.STEP_REQUEST_CANNOT_CANCEL);
-        }
+        stepRequestPermissionService.assertCanCancelRequest(user, stepRequest);
 
         StepRequestStatus beforeStatus = stepRequest.getStatus();
         stepRequest.updateStatus(StepRequestStatus.CANCELED);
@@ -461,20 +428,12 @@ public class StepRequestService {
                 : stepRequestRepository.findByStep_Project_IdInOrderByCreatedAtDesc(projectIds, pageable);
     }
 
-    private void validateUser(CustomUserDetails user) {
+    private User getUserOrThrow(CustomUserDetails user) {
         if (user == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-    }
-
-    private void validateProjectAccess(Long projectId, CustomUserDetails user) {
-        if (user.getRole() == UserRole.SYSTEM_ADMIN) {
-            return;
-        }
-        boolean isMember = projectMemberRepository.findActiveByProjectIdAndUserId(projectId, user.getId()).isPresent();
-        if (!isMember) {
-            throw new BusinessException(ErrorCode.NO_PROJECT_PERMISSION);
-        }
+        return userRepository.findById(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private AttachmentSimpleResponse toAttachmentSimpleResponse(Attachment attachment) {

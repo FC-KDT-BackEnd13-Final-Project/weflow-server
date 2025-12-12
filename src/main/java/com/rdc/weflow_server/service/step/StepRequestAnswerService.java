@@ -13,11 +13,9 @@ import com.rdc.weflow_server.entity.step.StepRequestAnswerType;
 import com.rdc.weflow_server.entity.step.StepRequestHistory;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
 import com.rdc.weflow_server.entity.user.User;
-import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
-import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRequestAnswerRepository;
 import com.rdc.weflow_server.repository.step.StepRequestHistoryRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
@@ -26,6 +24,7 @@ import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.file.S3FileService;
 import com.rdc.weflow_server.service.notification.NotificationService;
+import com.rdc.weflow_server.service.permission.StepRequestPermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,11 +42,11 @@ public class StepRequestAnswerService {
     private final StepRequestHistoryRepository stepRequestHistoryRepository;
     private final AttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
-    private final ProjectMemberRepository projectMemberRepository;
     private final StepRequestService stepRequestService;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     private final S3FileService s3FileService;
+    private final StepRequestPermissionService stepRequestPermissionService;
 
     public StepRequestAnswerResponse answerRequest(Long requestId, AuditContext ctx, StepRequestAnswerCreateRequest request) {
         StepRequest stepRequest = stepRequestRepository.findById(requestId)
@@ -60,25 +59,7 @@ public class StepRequestAnswerService {
             throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
 
-        // 승인/반려는 고객사 멤버만 가능 (시스템 관리자는 예외적으로 허용)
-        if (user.getRole() != UserRole.SYSTEM_ADMIN) {
-            if (user.getRole() != UserRole.CLIENT) {
-                throw new BusinessException(ErrorCode.FORBIDDEN);
-            }
-
-            boolean isActiveMember = projectMemberRepository
-                    .findByProjectIdAndUserId(stepRequest.getStep().getProject().getId(), ctx.userId())
-                    .filter(pm -> pm.getDeletedAt() == null)
-                    .isPresent();
-
-            if (!isActiveMember) {
-                throw new BusinessException(ErrorCode.FORBIDDEN);
-            }
-        }
-
-        if (stepRequest.getStatus() != StepRequestStatus.REQUESTED) {
-            throw new BusinessException(ErrorCode.STEP_REQUEST_ALREADY_DECIDED);
-        }
+        stepRequestPermissionService.assertCanAnswerRequest(user, stepRequest);
 
         // 반려/변경 요청 시 사유 필수
         if ((request.getResponse() == StepRequestAnswerType.REJECT

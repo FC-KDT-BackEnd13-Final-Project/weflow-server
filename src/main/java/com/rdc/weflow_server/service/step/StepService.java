@@ -9,20 +9,17 @@ import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.TargetTable;
 import com.rdc.weflow_server.entity.project.Project;
-import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.project.ProjectPhase;
-import com.rdc.weflow_server.entity.project.ProjectRole;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.step.StepStatus;
 import com.rdc.weflow_server.entity.user.User;
-import com.rdc.weflow_server.entity.user.UserRole;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.service.log.AuditContext;
 import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.permission.StepPermissionService;
 import com.rdc.weflow_server.repository.checklist.ChecklistRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
-import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.step.StepRequestRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
@@ -46,34 +43,11 @@ public class StepService {
     private final StepRepository stepRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
-    private final ProjectMemberRepository projectMemberRepository;
     private final PostRepository postRepository;
     private final StepRequestRepository stepRequestRepository;
     private final ChecklistRepository checklistRepository;
     private final ActivityLogService activityLogService;
-
-    private void checkProjectAdminPermission(Long currentUserId, Project project) {
-        User user = getUserOrThrow(currentUserId);
-
-        // 시스템 관리자는 모든 프로젝트에 대해 허용
-        if (user.getRole() == UserRole.SYSTEM_ADMIN) {
-            return;
-        }
-
-        ProjectMember member = projectMemberRepository
-                .findByProjectIdAndUserId(project.getId(), currentUserId)
-                .orElse(null);
-
-        // 프로젝트 멤버가 아니거나 삭제된 멤버면 거부
-        if (member == null || member.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        // 개발사 ADMIN인지 확인
-        if (member.getUser().getRole() != UserRole.AGENCY || member.getRole() != ProjectRole.ADMIN) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-    }
+    private final StepPermissionService stepPermissionService;
 
     // 프로젝트 단계 목록 조회
     @Transactional(readOnly = true)
@@ -121,7 +95,7 @@ public class StepService {
         Project project = getProjectOrThrow(projectId);
         User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(ctx.userId(), project);
+        stepPermissionService.assertCanManageSteps(user, project.getId());
 
         if (stepRepository.existsByProject_IdAndTitleIgnoreCaseAndDeletedAtIsNull(projectId, request.getTitle())) {
             throw new BusinessException(ErrorCode.STEP_ALREADY_EXISTS);
@@ -188,7 +162,7 @@ public class StepService {
         Step step = getStepOrThrow(stepId);
         User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(ctx.userId(), step.getProject());
+        stepPermissionService.assertCanManageSteps(user, step.getProject().getId());
 
         StepStatus currentStatus = step.getStatus();
         if (currentStatus != StepStatus.PENDING) {
@@ -228,7 +202,7 @@ public class StepService {
         Step step = getStepOrThrow(stepId);
         User user = getUserOrThrow(ctx.userId());
 
-        checkProjectAdminPermission(ctx.userId(), step.getProject());
+        stepPermissionService.assertCanManageSteps(user, step.getProject().getId());
 
         StepStatus status = step.getStatus();
         if (status != StepStatus.PENDING) {
@@ -263,7 +237,7 @@ public class StepService {
         User user = getUserOrThrow(ctx.userId());
         Project project = getProjectOrThrow(projectID);
 
-        checkProjectAdminPermission(ctx.userId(), project);
+        stepPermissionService.assertCanManageSteps(user, project.getId());
 
         List<StepOrderItem> orderItems = request.getSteps();
         if (orderItems == null || orderItems.isEmpty()) {

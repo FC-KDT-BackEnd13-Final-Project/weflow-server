@@ -5,7 +5,6 @@ import com.rdc.weflow_server.dto.notification.response.NotificationSummaryRespon
 import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.dto.step.StepRequestSummaryResponse;
 import com.rdc.weflow_server.entity.project.Project;
-import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
 import com.rdc.weflow_server.entity.step.StepRequest;
 import com.rdc.weflow_server.entity.step.StepRequestStatus;
@@ -23,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -76,34 +76,12 @@ public class UserDashboardService {
         long pendingApprovalCount = 0;
         List<StepRequestSummaryResponse> upcomingApprovals = Collections.emptyList();
 
-        if (userRole == UserRole.CLIENT) {
-
-            // 해당 클라이언트가 속한 프로젝트 목록
-            List<Long> projectIds = recentProjects.stream()
-                            .map(Project::getId)
-                            .toList();
-
-            if (!projectIds.isEmpty()) {
-
-                // 승인 대기 개수
-                pendingApprovalCount =
-                        stepRequestRepository.countByStep_Project_IdInAndStatus(
-                                projectIds,
-                                StepRequestStatus.REQUESTED
-                        );
-
-                // 승인 대기 Top 5
-                List<StepRequest> requests =
-                        stepRequestRepository.findTop5ByStep_Project_IdInAndStatusOrderByCreatedAtDesc(
-                                projectIds,
-                                StepRequestStatus.REQUESTED
-                        );
-
-                upcomingApprovals =
-                        requests.stream()
-                                .map(StepRequestSummaryResponse::from)
-                                .toList();
-            }
+        UpcomingStepRequestScope scope = buildUpcomingScope(user);
+        if (!scope.isEmpty()) {
+            pendingApprovalCount = countUpcomingApprovals(scope);
+            upcomingApprovals = findUpcomingApprovals(scope).stream()
+                    .map(StepRequestSummaryResponse::from)
+                    .toList();
         }
 
         // 최종 Response
@@ -115,5 +93,112 @@ public class UserDashboardService {
                 .importantProjects(importantProjects)
                 .upcomingApprovals(upcomingApprovals)
                 .build();
+    }
+
+    private UpcomingStepRequestScope buildUpcomingScope(User user) {
+        if (isSystemAdmin(user)) {
+            return UpcomingStepRequestScope.admin(List.of(
+                    StepRequestStatus.REQUESTED,
+                    StepRequestStatus.CHANGE_REQUESTED
+            ));
+        }
+
+        if (isClient(user)) {
+            List<Long> projectIds = projectMemberRepository.findActiveProjectIdsByUserId(user.getId());
+            return UpcomingStepRequestScope.client(
+                    projectIds,
+                    List.of(StepRequestStatus.REQUESTED)
+            );
+        }
+
+        if (isAgency(user)) {
+            return UpcomingStepRequestScope.agency(
+                    user.getId(),
+                    List.of(StepRequestStatus.CHANGE_REQUESTED)
+            );
+        }
+
+        return UpcomingStepRequestScope.empty();
+    }
+
+    private long countUpcomingApprovals(UpcomingStepRequestScope scope) {
+        return switch (scope.type()) {
+            case ADMIN -> stepRequestRepository.countByStatusIn(scope.statuses());
+            case CLIENT -> scope.projectIds().isEmpty()
+                    ? 0
+                    : stepRequestRepository.countByStep_Project_IdInAndStatusIn(scope.projectIds(), scope.statuses());
+            case AGENCY -> scope.requesterId()
+                    .map(requesterId -> stepRequestRepository.countByRequestedBy_IdAndStatusIn(
+                            requesterId,
+                            scope.statuses()
+                    ))
+                    .orElse(0L);
+            case EMPTY -> 0;
+        };
+    }
+
+    private List<StepRequest> findUpcomingApprovals(UpcomingStepRequestScope scope) {
+        return switch (scope.type()) {
+            case ADMIN -> stepRequestRepository.findTop5ByStatusInOrderByCreatedAtDesc(scope.statuses());
+            case CLIENT -> scope.projectIds().isEmpty()
+                    ? List.of()
+                    : stepRequestRepository.findTop5ByStep_Project_IdInAndStatusInOrderByCreatedAtDesc(
+                            scope.projectIds(),
+                            scope.statuses()
+                    );
+            case AGENCY -> scope.requesterId()
+                    .map(requesterId -> stepRequestRepository.findTop5ByRequestedBy_IdAndStatusInOrderByCreatedAtDesc(
+                            requesterId,
+                            scope.statuses()
+                    ))
+                    .orElse(List.of());
+            case EMPTY -> List.of();
+        };
+    }
+
+    private boolean isSystemAdmin(User user) {
+        return user != null && user.getRole() == UserRole.SYSTEM_ADMIN;
+    }
+
+    private boolean isClient(User user) {
+        return user != null && user.getRole() == UserRole.CLIENT;
+    }
+
+    private boolean isAgency(User user) {
+        return user != null && user.getRole() == UserRole.AGENCY;
+    }
+
+    private record UpcomingStepRequestScope(
+            ScopeType type,
+            List<Long> projectIds,
+            Optional<Long> requesterId,
+            List<StepRequestStatus> statuses
+    ) {
+        static UpcomingStepRequestScope admin(List<StepRequestStatus> statuses) {
+            return new UpcomingStepRequestScope(ScopeType.ADMIN, List.of(), Optional.empty(), statuses);
+        }
+
+        static UpcomingStepRequestScope client(List<Long> projectIds, List<StepRequestStatus> statuses) {
+            return new UpcomingStepRequestScope(ScopeType.CLIENT, projectIds, Optional.empty(), statuses);
+        }
+
+        static UpcomingStepRequestScope agency(Long requesterId, List<StepRequestStatus> statuses) {
+            return new UpcomingStepRequestScope(ScopeType.AGENCY, List.of(), Optional.ofNullable(requesterId), statuses);
+        }
+
+        static UpcomingStepRequestScope empty() {
+            return new UpcomingStepRequestScope(ScopeType.EMPTY, List.of(), Optional.empty(), List.of());
+        }
+
+        boolean isEmpty() {
+            return type == ScopeType.EMPTY;
+        }
+    }
+
+    private enum ScopeType {
+        ADMIN,
+        CLIENT,
+        AGENCY,
+        EMPTY
     }
 }

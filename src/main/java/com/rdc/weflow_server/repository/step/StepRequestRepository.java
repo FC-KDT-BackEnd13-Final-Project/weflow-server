@@ -61,4 +61,23 @@ public interface StepRequestRepository extends JpaRepository<StepRequest, Long> 
     );
     boolean existsByStep_IdAndStatusIn(Long stepId, List<StepRequestStatus> statuses);
 
+    // 대시보드용: 상태 리스트 기반 전체/프로젝트/요청자 조회
+    long countByStatusIn(List<StepRequestStatus> statuses);
+
+    List<StepRequest> findTop5ByStatusInOrderByCreatedAtDesc(List<StepRequestStatus> statuses);
+
+    long countByStep_Project_IdInAndStatusIn(List<Long> projectIds, List<StepRequestStatus> statuses);
+
+    List<StepRequest> findTop5ByStep_Project_IdInAndStatusInOrderByCreatedAtDesc(
+            List<Long> projectIds,
+            List<StepRequestStatus> statuses
+    );
+
+    long countByRequestedBy_IdAndStatusIn(Long requestedById, List<StepRequestStatus> statuses);
+
+    List<StepRequest> findTop5ByRequestedBy_IdAndStatusInOrderByCreatedAtDesc(
+            Long requestedById,
+            List<StepRequestStatus> statuses
+    );
+
 }

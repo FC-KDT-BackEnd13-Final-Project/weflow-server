@@ -16,8 +16,9 @@ public class StepPermissionService {
 
     private final ProjectMemberRepository projectMemberRepository;
 
+    /** 스텝 생성/수정/삭제 등 관리 권한 검증 (SYSTEM_ADMIN 또는 개발사 ADMIN 멤버) */
     public void assertCanManageSteps(User user, Long projectId) {
-        validateUser(user);
+        requireUser(user);
         if (user.getRole() == UserRole.SYSTEM_ADMIN) {
             return;
         }
@@ -30,8 +31,9 @@ public class StepPermissionService {
         }
     }
 
+    /** 스텝/프로젝트 조회 권한 검증 (SYSTEM_ADMIN 또는 활성 멤버) */
     public void assertCanViewProject(User user, Long projectId) {
-        validateUser(user);
+        requireUser(user);
         if (user.getRole() == UserRole.SYSTEM_ADMIN) {
             return;
         }
@@ -42,7 +44,7 @@ public class StepPermissionService {
         }
     }
 
-    private void validateUser(User user) {
+    private void requireUser(User user) {
         if (user == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }

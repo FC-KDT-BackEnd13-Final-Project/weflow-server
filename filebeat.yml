@@ -2,15 +2,23 @@ filebeat.inputs:
   - type: log
     enabled: true
     paths:
-      - /logs/*.json
+      - /usr/share/filebeat/logs/*.json
     json.keys_under_root: true
     json.add_error_key: true
 
-# 템플릿 설정 추가
+
+setup.ilm.enabled: false
+
 setup.template.name: "weflow-logs"
 setup.template.pattern: "weflow-logs-*"
 setup.template.enabled: true
 
 output.elasticsearch:
-  hosts: ["http://elasticsearch:9200"]
+  hosts: ["http://es:9200"]
   index: "weflow-logs-%{+yyyy.MM.dd}"
+
+processors:
+  - dissect:
+      tokenizer: "API_CALL method=%{api_method} path=%{api_path} status=%{api_status} duration=%{duration_ms}ms"
+      field: "message"
+      target_prefix: ""

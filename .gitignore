@@ -42,3 +42,9 @@ src/main/resources/application-secret.yml
 
 ### CICD ###
 .env
+
+# logs
+logs/
+logs/**
+application.json
+app.*.json

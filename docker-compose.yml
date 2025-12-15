@@ -22,9 +22,10 @@ services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:7.17.9
     container_name: filebeat
+    user: root
     volumes:
-      - ./logs:/logs
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ../weflow-server/logs:/usr/share/filebeat/logs
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
     depends_on:
       - elasticsearch
 

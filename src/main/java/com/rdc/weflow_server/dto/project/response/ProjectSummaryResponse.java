@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,6 +23,7 @@ public class ProjectSummaryResponse {
     private ProjectPhase phase;
     private ProjectStatus status;
     private String customerCompanyName;
+    private LocalDateTime expirationDate;
 
     public static ProjectSummaryResponse from(Project p) {
         return ProjectSummaryResponse.builder()
@@ -29,6 +32,7 @@ public class ProjectSummaryResponse {
                 .phase(p.getPhase())
                 .status(p.getStatus())
                 .customerCompanyName(p.getCompany().getName())
+                .expirationDate(p.getExpectedEndDate())
                 .build();
     }
 }

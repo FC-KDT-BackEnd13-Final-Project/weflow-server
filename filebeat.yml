@@ -1,0 +1,16 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /logs/*.json
+    json.keys_under_root: true
+    json.add_error_key: true
+
+# 템플릿 설정 추가
+setup.template.name: "weflow-logs"
+setup.template.pattern: "weflow-logs-*"
+setup.template.enabled: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "weflow-logs-%{+yyyy.MM.dd}"

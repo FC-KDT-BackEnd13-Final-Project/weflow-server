@@ -49,6 +49,7 @@ dependencies {
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 	implementation platform('software.amazon.awssdk:bom:2.24.0')
 	implementation 'software.amazon.awssdk:s3'
+	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 }
 
 tasks.withType(JavaCompile).configureEach {

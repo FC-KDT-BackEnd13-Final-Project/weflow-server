@@ -1,6 +1,7 @@
 package com.rdc.weflow_server.controller.log;
 
 import com.rdc.weflow_server.common.api.ApiResponse;
+import com.rdc.weflow_server.dto.log.ActivityLogCursorResponseDto;
 import com.rdc.weflow_server.dto.log.ActivityLogListResponseDto;
 import com.rdc.weflow_server.dto.log.ActivityLogStatisticsDto;
 import com.rdc.weflow_server.service.log.ActivityLogService;
@@ -42,6 +43,37 @@ public class AdminActivityLogController {
         );
 
         return ApiResponse.success("LOGS_FETCHED", data);
+    }
+
+    @GetMapping("/cursor")
+    public ApiResponse<ActivityLogCursorResponseDto> getLogsCursor(
+            @RequestParam(required = false) String actionType,
+            @RequestParam(required = false) String targetTable,
+            @RequestParam(required = false) Long targetId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorCreatedAt,
+            @RequestParam(required = false) Long cursorId,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false, defaultValue = "false") boolean includeTotal
+    ) {
+        ActivityLogCursorResponseDto data = activityLogService.searchLogsCursor(
+                actionType,
+                targetTable,
+                targetId,
+                userId,
+                projectId,
+                startDate,
+                endDate,
+                limit,
+                cursorCreatedAt,
+                cursorId,
+                includeTotal
+        );
+
+        return ApiResponse.success("ACTIVITY_LOG_LIST_FETCHED", data);
     }
 
     // 특정 리소스 로그 조회

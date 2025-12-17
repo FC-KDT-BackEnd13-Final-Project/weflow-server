@@ -13,6 +13,7 @@ public interface ActivityLogRepositoryCustom {
     Page<ActivityLogResponseDto> searchLogs(
             String actionType,
             String targetTable,
+            Long targetId,
             Long userId,
             Long projectId,
             LocalDateTime startDate,
@@ -48,4 +49,27 @@ public interface ActivityLogRepositoryCustom {
             String endDate
     );
     List<ActivityLogResponseDto> findRecentLogs(int limit); // 최근 로그 5개
+
+    List<ActivityLogResponseDto> searchLogsCursor(
+            String actionType,
+            String targetTable,
+            Long targetId,
+            Long userId,
+            Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            LocalDateTime cursorCreatedAt,
+            Long cursorId,
+            int limit
+    );
+
+    Long countLogsCursor(
+            String actionType,
+            String targetTable,
+            Long targetId,
+            Long userId,
+            Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 }

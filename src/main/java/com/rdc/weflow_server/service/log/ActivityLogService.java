@@ -1,8 +1,10 @@
 package com.rdc.weflow_server.service.log;
 
 import com.rdc.weflow_server.dto.log.ActivityLogListResponseDto;
+import com.rdc.weflow_server.dto.log.ActivityLogCursorResponseDto;
 import com.rdc.weflow_server.dto.log.ActivityLogResponseDto;
 import com.rdc.weflow_server.dto.log.ActivityLogStatisticsDto;
+import com.rdc.weflow_server.dto.log.CursorDto;
 import com.rdc.weflow_server.entity.log.ActionType;
 import com.rdc.weflow_server.entity.log.ActivityLog;
 import com.rdc.weflow_server.entity.log.TargetTable;
@@ -12,6 +14,8 @@ import com.rdc.weflow_server.repository.log.ActivityLogRepository;
 import com.rdc.weflow_server.repository.project.ProjectRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.util.CsvGenerator;
+import com.rdc.weflow_server.exception.BusinessException;
+import com.rdc.weflow_server.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +27,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ActivityLogService {
+
+    private static final int DEFAULT_LIMIT = 20;
+    private static final int MAX_LIMIT = 100;
 
     private final ActivityLogRepository activityLogRepository;
     private final CsvGenerator csvGenerator;
@@ -66,6 +73,7 @@ public class ActivityLogService {
         Page<ActivityLogResponseDto> page = activityLogRepository.searchLogs(
                 actionType,
                 targetTable,
+                null,
                 userId,
                 projectId,
                 startDate,
@@ -77,6 +85,88 @@ public class ActivityLogService {
                 .logs(page.getContent())
                 .totalCount(page.getTotalElements())
                 .build();
+    }
+
+    public ActivityLogCursorResponseDto searchLogsCursor(
+            String actionType,
+            String targetTable,
+            Long targetId,
+            Long userId,
+            Long projectId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Integer limit,
+            LocalDateTime cursorCreatedAt,
+            Long cursorId,
+            boolean includeTotal
+    ) {
+        validateCursorParams(cursorCreatedAt, cursorId);
+        int resolvedLimit = resolveLimit(limit);
+
+        List<ActivityLogResponseDto> logs = activityLogRepository.searchLogsCursor(
+                actionType,
+                targetTable,
+                targetId,
+                userId,
+                projectId,
+                startDate,
+                endDate,
+                cursorCreatedAt,
+                cursorId,
+                resolvedLimit + 1
+        );
+
+        Long totalCount = null;
+        if (includeTotal) {
+            totalCount = activityLogRepository.countLogsCursor(
+                    actionType,
+                    targetTable,
+                    targetId,
+                    userId,
+                    projectId,
+                    startDate,
+                    endDate
+            );
+        }
+
+        boolean hasNext = logs.size() > resolvedLimit;
+        if (hasNext) {
+            logs = logs.subList(0, resolvedLimit);
+        }
+
+        CursorDto nextCursor = null;
+        if (hasNext && !logs.isEmpty()) {
+            ActivityLogResponseDto last = logs.get(logs.size() - 1);
+            nextCursor = CursorDto.builder()
+                    .createdAt(last.getCreatedAt())
+                    .id(last.getLogId())
+                    .build();
+        }
+
+        return ActivityLogCursorResponseDto.builder()
+                .items(logs)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .totalCount(totalCount)
+                .build();
+    }
+
+    private void validateCursorParams(LocalDateTime cursorCreatedAt, Long cursorId) {
+        boolean hasCreatedAt = cursorCreatedAt != null;
+        boolean hasId = cursorId != null;
+        if ((hasCreatedAt && !hasId) || (!hasCreatedAt && hasId)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "cursorCreatedAt과 cursorId는 함께 전달되어야 합니다.");
+        }
+    }
+
+    private int resolveLimit(Integer limit) {
+        if (limit == null) {
+            return DEFAULT_LIMIT;
+        }
+        if (limit < 1) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "limit는 1 이상이어야 합니다.");
+        }
+        return Math.min(limit, MAX_LIMIT);
     }
 
     // 특정 리소스 로그 조회 (POST/COMMENT/PROJECT...)

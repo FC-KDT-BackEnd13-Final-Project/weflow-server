@@ -142,8 +142,19 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         QProjectMember member = QProjectMember.projectMember;
 
         return switch (role) {
-            case SYSTEM_ADMIN, AGENCY -> project.id.isNotNull(); // 전체 접근
-            case CLIENT -> member.user.id.eq(userId);            // 본인 프로젝트만
+            case SYSTEM_ADMIN, AGENCY -> project.id.isNotNull();
+
+            case CLIENT ->
+                    JPAExpressions
+                            .selectOne()
+                            .from(member)
+                            .where(
+                                    member.project.id.eq(project.id),
+                                    member.user.id.eq(userId),
+                                    member.deletedAt.isNull()
+                            )
+                            .exists();
+
             default -> null;
         };
     }

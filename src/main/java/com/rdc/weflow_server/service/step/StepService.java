@@ -102,7 +102,7 @@ public class StepService {
         }
 
         ProjectPhase phase = request.getPhase() != null ? request.getPhase() : ProjectPhase.IN_PROGRESS;
-        Integer orderIndex = resolveOrderIndex(projectId, request.getOrderIndex());
+        Integer orderIndex = resolveOrderIndex(projectId, phase, request.getOrderIndex());
         StepStatus status = StepStatus.PENDING;
 
         Step step = Step.builder()
@@ -291,12 +291,12 @@ public class StepService {
         );
     }
 
-    private Integer resolveOrderIndex(Long projectId, Integer requestedOrderIndex) {
+    private Integer resolveOrderIndex(Long projectId, ProjectPhase phase, Integer requestedOrderIndex) {
         if (requestedOrderIndex == null || requestedOrderIndex < 1) {
-            Integer maxOrder = stepRepository.findMaxOrderIndexByProjectId(projectId);
+            Integer maxOrder = stepRepository.findMaxOrderIndexByProjectIdAndPhase(projectId, phase);
             return (maxOrder == null ? 1 : maxOrder + 1);
         }
-        if (stepRepository.existsByProject_IdAndOrderIndexAndDeletedAtIsNull(projectId, requestedOrderIndex)) {
+        if (stepRepository.existsByProject_IdAndPhaseAndOrderIndexAndDeletedAtIsNull(projectId, phase, requestedOrderIndex)) {
             throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
         }
         return requestedOrderIndex;

@@ -359,11 +359,12 @@ public class ActivityLogRepositoryImpl implements ActivityLogRepositoryCustom {
         if (startDate != null) builder.and(activityLog.createdAt.goe(startDate));
         if (endDate != null) builder.and(activityLog.createdAt.loe(endDate));
 
-        return queryFactory
+        Long result = queryFactory
                 .select(activityLog.count())
                 .from(activityLog)
                 .where(builder)
                 .fetchOne();
+        return result != null ? result : 0L;
     }
 
 }

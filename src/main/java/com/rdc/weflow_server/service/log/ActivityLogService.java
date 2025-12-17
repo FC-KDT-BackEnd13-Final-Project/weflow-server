@@ -103,6 +103,7 @@ public class ActivityLogService {
         validateCursorParams(cursorCreatedAt, cursorId);
         int resolvedLimit = resolveLimit(limit);
 
+        boolean firstPage = cursorCreatedAt == null && cursorId == null;
         List<ActivityLogResponseDto> logs = activityLogRepository.searchLogsCursor(
                 actionType,
                 targetTable,
@@ -111,8 +112,8 @@ public class ActivityLogService {
                 projectId,
                 startDate,
                 endDate,
-                cursorCreatedAt,
-                cursorId,
+                firstPage ? null : cursorCreatedAt,
+                firstPage ? null : cursorId,
                 resolvedLimit + 1
         );
 
@@ -127,6 +128,9 @@ public class ActivityLogService {
                     startDate,
                     endDate
             );
+            if (totalCount == null) {
+                totalCount = 0L;
+            }
         }
 
         boolean hasNext = logs.size() > resolvedLimit;

@@ -15,7 +15,7 @@ public class ProjectListResponse {
     private List<ProjectSummaryResponse> projects;
 
     public static ProjectListResponse of(
-            List<Project> projects,
+            List<ProjectSummaryResponse> projects,
             long totalCount,
             int page,
             int size
@@ -24,11 +24,7 @@ public class ProjectListResponse {
                 .totalCount(totalCount)
                 .page(page)
                 .size(size)
-                .projects(
-                        projects.stream()
-                                .map(ProjectSummaryResponse::from)
-                                .toList()
-                )
+                .projects(projects)
                 .build();
     }
 }

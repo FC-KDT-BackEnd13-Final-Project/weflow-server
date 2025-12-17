@@ -35,7 +35,7 @@ public class ProjectService {
         Long userId = user.getId();
         UserRole role = user.getRole();
 
-        List<Project> projects =
+        List<ProjectSummaryResponse> projects =
                 projectRepository.searchMyProjects(userId, role, keyword, page, size);
 
         long total =

@@ -1,7 +1,10 @@
 package com.rdc.weflow_server.repository.project;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.rdc.weflow_server.dto.project.response.ProjectSummaryResponse;
 import com.rdc.weflow_server.entity.project.Project;
 import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.entity.project.ProjectStatus;
@@ -55,13 +58,34 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
 
     /** MY PROJECTS */
     @Override
-    public List<Project> searchMyProjects(Long userId, UserRole role, String keyword, int page, int size) {
+    public List<ProjectSummaryResponse> searchMyProjects(Long userId, UserRole role, String keyword, int page, int size) {
         QProject project = QProject.project;
         QProjectMember member = QProjectMember.projectMember;
 
         return query
-                .selectFrom(project)
-                .leftJoin(project.projectMembers, member).on(member.user.id.eq(userId))
+                .select(
+                        Projections.constructor(
+                                ProjectSummaryResponse.class,
+                                project.id,
+                                project.name,
+                                project.phase,
+                                project.status,
+                                project.company.name,
+                                project.expectedEndDate,
+
+                                // ⭐ isMember 계산
+                                JPAExpressions
+                                        .selectOne()
+                                        .from(member)
+                                        .where(
+                                                member.project.id.eq(project.id),
+                                                member.user.id.eq(userId),
+                                                member.deletedAt.isNull()
+                                        )
+                                        .exists()
+                        )
+                )
+                .from(project)
                 .where(
                         roleFilter(role, userId),
                         containsName(keyword),

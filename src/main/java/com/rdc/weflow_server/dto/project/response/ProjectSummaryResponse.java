@@ -25,6 +25,8 @@ public class ProjectSummaryResponse {
     private String customerCompanyName;
     private LocalDateTime expirationDate;
 
+    private boolean isMember;
+
     public static ProjectSummaryResponse from(Project p) {
         return ProjectSummaryResponse.builder()
                 .projectId(p.getId())

@@ -4,8 +4,8 @@ import com.rdc.weflow_server.common.api.ApiResponse;
 import com.rdc.weflow_server.config.security.CustomUserDetails;
 import com.rdc.weflow_server.dto.step.StepCreateRequest;
 import com.rdc.weflow_server.dto.step.StepListResponse;
-import com.rdc.weflow_server.dto.step.StepReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
+import com.rdc.weflow_server.dto.step.StepPhaseReorderRequest;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.project.ProjectPhase;
 import com.rdc.weflow_server.service.log.AuditContext;
@@ -96,12 +96,13 @@ public class AdminStepController {
     /**
      * Step 순서 바꾸기
      */
-    @PatchMapping("/steps/reorder")
-    public ApiResponse<Void> reorderSteps(@AuthenticationPrincipal CustomUserDetails user,
-                                          @RequestBody @Valid StepReorderRequest request,
-                                          HttpServletRequest httpRequest) {
-        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), request.getProjectId());
-        stepService.reorderSteps(request.getProjectId(), request, ctx);
-        return ApiResponse.success("step.reorder.success", null);
+    @PatchMapping("/projects/{projectId}/steps/reorder")
+    public ApiResponse<StepListResponse> reorderSteps(@AuthenticationPrincipal CustomUserDetails user,
+                                                      @PathVariable Long projectId,
+                                                      @RequestBody @Valid StepPhaseReorderRequest request,
+                                                      HttpServletRequest httpRequest) {
+        AuditContext ctx = new AuditContext(user.getId(), httpRequest.getRemoteAddr(), projectId);
+        StepListResponse response = stepService.reorderSteps(projectId, request, ctx);
+        return ApiResponse.success("step.reorder.success", response);
     }
 }

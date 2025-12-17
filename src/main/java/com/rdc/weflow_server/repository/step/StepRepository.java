@@ -42,9 +42,6 @@ public interface StepRepository extends JpaRepository<Step, Long> {
             """)
     @EntityGraph(attributePaths = {"project", "createdBy"})
     List<Step> findByProject_IdAndPhaseAndDeletedAtIsNullOrderByOrderIndexAsc(Long projectId, ProjectPhase phase);
-    @Query("select max(s.orderIndex) from Step s where s.project.id = :projectId and s.deletedAt is null")
-    Integer findMaxOrderIndexByProjectId(Long projectId);
-
     @Query("""
             select s from Step s
             where s.project.id = :projectId

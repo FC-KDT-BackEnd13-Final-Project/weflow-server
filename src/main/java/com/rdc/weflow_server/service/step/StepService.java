@@ -2,8 +2,7 @@ package com.rdc.weflow_server.service.step;
 
 import com.rdc.weflow_server.dto.step.StepCreateRequest;
 import com.rdc.weflow_server.dto.step.StepListResponse;
-import com.rdc.weflow_server.dto.step.StepOrderItem;
-import com.rdc.weflow_server.dto.step.StepReorderRequest;
+import com.rdc.weflow_server.dto.step.StepPhaseReorderRequest;
 import com.rdc.weflow_server.dto.step.StepResponse;
 import com.rdc.weflow_server.dto.step.StepUpdateRequest;
 import com.rdc.weflow_server.entity.log.ActionType;
@@ -29,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -229,56 +227,70 @@ public class StepService {
     }
 
     /*
-     단계 순서 변경 (개발사 관리자)
+     단계 순서 변경 (phase 전량, 서버가 1..N 재할당)
      - PENDING 상태인 단계만 순서 변경 허용
-     - 동일 phase 내에서만 순서 변경 가능
+     - 동일 phase 내 전체 목록을 요청 순서대로 재정렬
      */
-    public void reorderSteps(Long projectID, StepReorderRequest request, AuditContext ctx) {
+    public StepListResponse reorderSteps(Long projectId, StepPhaseReorderRequest request, AuditContext ctx) {
         User user = getUserOrThrow(ctx.userId());
-        Project project = getProjectOrThrow(projectID);
+        Project project = getProjectOrThrow(projectId);
 
         stepPermissionService.assertCanManageSteps(user, project.getId());
 
-        List<StepOrderItem> orderItems = request.getSteps();
-        if (orderItems == null || orderItems.isEmpty()) {
-            return;
-        }
-
-        Map<Long, Integer> orderMap = orderItems.stream()
-                .collect(Collectors.toMap(
-                        StepOrderItem::getStepId,
-                        StepOrderItem::getOrderIndex,
-                        (existing, duplicate) -> { throw new BusinessException(ErrorCode.STEP_ORDER_INVALID); },
-                        LinkedHashMap::new));
-
-        validateOrderItems(orderMap);
-
-        List<Step> steps = stepRepository.findByProject_IdAndIdInAndDeletedAtIsNull(projectID, orderMap.keySet());
-        if (steps.size() != orderMap.size()) {
-            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
-        }
-
-        // phase가 섞여 있으면 순서 변경 불가
-        Set<ProjectPhase> phases = steps.stream()
-                .map(Step::getPhase)
-                .collect(Collectors.toSet());
-        if (phases.size() > 1) {
+        List<Long> orderedStepIds = request.getOrderedStepIds();
+        if (orderedStepIds == null || orderedStepIds.isEmpty()) {
             throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
         }
 
-        for (Step step : steps) {
-            Integer newOrder = orderMap.get(step.getId());
+        List<Long> distinctIds = orderedStepIds.stream()
+                .peek(id -> {
+                    if (id == null) {
+                        throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+                    }
+                })
+                .distinct()
+                .toList();
+        if (distinctIds.size() != orderedStepIds.size()) {
+            throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+        }
 
-            StepStatus status = step.getStatus();
+        List<Step> steps = stepRepository.findByProject_IdAndPhaseAndDeletedAtIsNullOrderByOrderIndexAsc(
+                projectId,
+                request.getPhase()
+        );
 
-            // 순서 변경 불가 상태
-            if (status == StepStatus.IN_PROGRESS
-                || status == StepStatus.WAITING_APPROVAL
-                || status == StepStatus.APPROVED) {
-                throw new BusinessException(ErrorCode.STEP_STATUS_INVALID);
+        Map<Long, Step> pendingById = steps.stream()
+                .filter(s -> s.getStatus() == StepStatus.PENDING)
+                .collect(Collectors.toMap(Step::getId, s -> s));
+
+        if (pendingById.size() != orderedStepIds.size()) {
+            throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+        }
+
+        Set<Long> pendingIds = new HashSet<>(orderedStepIds);
+        if (!pendingById.keySet().equals(pendingIds)) {
+            throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+        }
+
+        // 고정 단계(비 PENDING)의 orderIndex는 유지, 중복 방지를 위해 예약
+        Set<Integer> usedOrderIndices = steps.stream()
+                .filter(s -> s.getStatus() != StepStatus.PENDING)
+                .map(Step::getOrderIndex)
+                .filter(idx -> idx != null && idx > 0)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        int order = 1;
+        for (Long id : orderedStepIds) {
+            while (usedOrderIndices.contains(order)) {
+                order++;
             }
-
-            step.updateOrderIndex(newOrder);
+            Step step = pendingById.get(id);
+            if (step == null) {
+                throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
+            }
+            step.updateOrderIndex(order);
+            usedOrderIndices.add(order);
+            order++;
         }
 
         activityLogService.createLog(
@@ -289,6 +301,8 @@ public class StepService {
                 project.getId(),
                 ctx.ipAddress()
         );
+
+        return getStepsByProject(projectId);
     }
 
     private Integer resolveOrderIndex(Long projectId, ProjectPhase phase, Integer requestedOrderIndex) {
@@ -300,23 +314,6 @@ public class StepService {
             throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
         }
         return requestedOrderIndex;
-    }
-
-    private void validateOrderItems(Map<Long, Integer> orderMap) {
-        if (orderMap.isEmpty()) {
-            return;
-        }
-        Set<Integer> orderIndices = new HashSet<>();
-        for (Map.Entry<Long, Integer> entry : orderMap.entrySet()) {
-            Long stepId = entry.getKey();
-            Integer orderIndex = entry.getValue();
-            if (stepId == null || orderIndex == null || orderIndex < 1) {
-                throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
-            }
-            if (!orderIndices.add(orderIndex)) {
-                throw new BusinessException(ErrorCode.STEP_ORDER_INVALID);
-            }
-        }
     }
 
     public Step getStepOrThrow(Long stepId) {

@@ -291,6 +291,17 @@ public class StepService {
         );
     }
 
+    @Transactional
+    public void deleteAllStepsByProject(Long projectId, AuditContext ctx) {
+
+        List<Step> steps = stepRepository
+                .findByProject_IdAndDeletedAtIsNullOrderByOrderIndexAsc(projectId);
+
+        // soft delete
+        // 또는 stepRepository.delete(step); // hard delete 정책이면
+        stepRepository.deleteAll(steps);
+    }
+
     private Integer resolveOrderIndex(Long projectId, Integer requestedOrderIndex) {
         if (requestedOrderIndex == null || requestedOrderIndex < 1) {
             Integer maxOrder = stepRepository.findMaxOrderIndexByProjectId(projectId);

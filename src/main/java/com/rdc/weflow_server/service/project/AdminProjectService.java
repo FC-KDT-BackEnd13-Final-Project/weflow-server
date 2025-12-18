@@ -180,6 +180,17 @@ public class AdminProjectService {
 
         projectRepository.save(project);
 
+        if (request.getSteps() != null) {
+            AuditContext ctx = new AuditContext(user.getId(), ip, project.getId());
+            // 1) 기존 step 전부 삭제
+            stepService.deleteAllStepsByProject(projectId, ctx);
+
+            // 2) 전달받은 steps 기준으로 재생성
+            for (StepCreateRequest stepReq: request.getSteps()) {
+                stepService.createStep(project.getId(), stepReq, ctx);
+            }
+        }
+
         // 로그 기록
         activityLogService.createLog(
                 ActionType.UPDATE,

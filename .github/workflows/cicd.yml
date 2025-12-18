@@ -21,16 +21,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/build.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
       - name: test & build
         run: ./gradlew clean build -x test
 
@@ -48,16 +38,15 @@ jobs:
       - name: build docker image
         run: docker build -t weflow-server .
 
-      - name: build docker image
-        run: |
-          docker pull ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest || true
-          docker build --cache-from ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest -t weflow-server .
-
       - name: Docker image에 Tag 붙이기
-        run: docker tag weflow-server ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
+        run: |
+          docker tag weflow-server ${{ steps.login-ecr.outputs.registry }}/weflow-server:${{ github.sha }}
+          docker tag weflow-server ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
 
       - name: ECR에 Docker image Push
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/weflow-server:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
 
       - name: Deploy EC2 (SSH로 EC2 접속 후 배포)
         uses: appleboy/ssh-action@v1.0.3
@@ -66,14 +55,15 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             docker stop weflow-server || true
             docker rm weflow-server || true
             docker image prune -f
-            docker pull ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/weflow-server:${{ github.sha }}
             docker run -d \
               --name weflow-server \
               --env-file /home/ubuntu/weflow.env \
               -p 8080:8080 \
               -v /var/log/weflow:/logs\
               --restart unless-stopped \
-              ${{ steps.login-ecr.outputs.registry }}/weflow-server:latest
+              ${{ steps.login-ecr.outputs.registry }}/weflow-server:${{ github.sha }}

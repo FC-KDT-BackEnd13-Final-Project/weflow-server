@@ -15,6 +15,8 @@ import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.company.CompanyRepository;
 import com.rdc.weflow_server.repository.user.UserRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
+import com.rdc.weflow_server.service.notification.NotificationService;
+import com.rdc.weflow_server.entity.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -49,6 +51,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final PlatformTransactionManager transactionManager;
+    private final NotificationService notificationService;
 
     /**
      * 이메일 중복 검사 (리스트)
@@ -440,7 +443,29 @@ public class UserService {
         // 4. 비밀번호 변경 (암호화 + 임시 비밀번호 해제)
         user.changePassword(passwordEncoder.encode(request.getNewPassword()));
 
-        // 5. 로그 기록
+        // 5. 비밀번호 변경 알림 발송
+        String notificationTitle = "비밀번호가 변경되었습니다";
+        String notificationMessage = String.format(
+            "%s님의 비밀번호가 성공적으로 변경되었습니다.\n" +
+            "변경 시간: %s\n" +
+            "접속 IP: %s\n\n" +
+            "본인이 변경하지 않은 경우, 즉시 관리자에게 문의해주세요.",
+            user.getName(),
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+            ipAddress
+        );
+
+        notificationService.send(
+            user,
+            NotificationType.PASSWORD_CHANGED,
+            notificationTitle,
+            notificationMessage,
+            null,  // project
+            null,  // post
+            null   // stepRequest
+        );
+
+        // 6. 로그 기록
         activityLogService.createLog(
                 ActionType.UPDATE,
                 TargetTable.USER,
@@ -593,7 +618,29 @@ public class UserService {
         // 4. 비밀번호 강제 재설정 (임시 비밀번호로 설정)
         user.resetPasswordByAdmin(encodedPassword);
 
-        // 5. 로그 기록 (관리자가 비밀번호 재설정)
+        // 5. 비밀번호 재설정 알림 발송
+        String notificationTitle = "비밀번호가 관리자에 의해 재설정되었습니다";
+        String notificationMessage = String.format(
+            "%s님의 비밀번호가 관리자에 의해 재설정되었습니다.\n" +
+            "재설정 시간: %s\n\n" +
+            "새로운 임시 비밀번호로 로그인한 후, 반드시 비밀번호를 변경해주세요.\n" +
+            "임시 비밀번호: %s",
+            user.getName(),
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+            newPassword  // 암호화 전 평문 비밀번호
+        );
+
+        notificationService.send(
+            user,
+            NotificationType.PASSWORD_RESET_BY_ADMIN,
+            notificationTitle,
+            notificationMessage,
+            null,  // project
+            null,  // post
+            null   // stepRequest
+        );
+
+        // 6. 로그 기록 (관리자가 비밀번호 재설정)
         activityLogService.createLog(
                 ActionType.UPDATE,
                 TargetTable.USER,
@@ -603,7 +650,7 @@ public class UserService {
                 ipAddress
         );
 
-        // 6. Entity → Response 변환
+        // 7. Entity → Response 변환
         return UserResponse.from(user);
     }
 }

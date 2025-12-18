@@ -69,10 +69,12 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
 
     // --- 동적 쿼리 조건 메서드들 ---
 
-    // 키워드 검색 (이름 OR 이메일 포함)
+    // 키워드 검색 (이름 OR 이메일 OR 회사명 포함)
     private BooleanExpression keywordContains(String keyword) {
         return StringUtils.hasText(keyword)
-                ? user.name.contains(keyword).or(user.email.contains(keyword))
+                ? user.name.contains(keyword)
+                    .or(user.email.contains(keyword))
+                    .or(user.company.name.contains(keyword))
                 : null;
     }
 

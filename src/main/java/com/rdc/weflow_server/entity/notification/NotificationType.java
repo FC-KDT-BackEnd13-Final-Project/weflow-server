@@ -22,5 +22,7 @@ public enum NotificationType {
     APPROVAL_APPROVED,
     APPROVAL_REJECTED,
     TASK_ASSIGNED,
-    TASK_COMPLETED
+    TASK_COMPLETED,
+    PASSWORD_CHANGED,           // 사용자 비밀번호 변경
+    PASSWORD_RESET_BY_ADMIN    // 관리자 비밀번호 재설정
 }

@@ -16,6 +16,10 @@ import com.rdc.weflow_server.entity.notification.NotificationType;
 import com.rdc.weflow_server.entity.project.ProjectMember;
 import com.rdc.weflow_server.entity.step.Step;
 import com.rdc.weflow_server.entity.user.User;
+import com.rdc.weflow_server.event.checklist.ChecklistCreatedEvent;
+import com.rdc.weflow_server.event.checklist.ChecklistDeletedEvent;
+import com.rdc.weflow_server.event.checklist.ChecklistSubmittedEvent;
+import com.rdc.weflow_server.event.checklist.ChecklistUpdatedEvent;
 import com.rdc.weflow_server.exception.BusinessException;
 import com.rdc.weflow_server.exception.ErrorCode;
 import com.rdc.weflow_server.repository.checklist.ChecklistAnswerRepository;
@@ -27,6 +31,7 @@ import com.rdc.weflow_server.repository.step.StepRepository;
 import com.rdc.weflow_server.service.log.ActivityLogService;
 import com.rdc.weflow_server.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,9 +52,8 @@ public class ChecklistService {
     private final ChecklistOptionRepository optionRepository;
     private final StepRepository stepRepository;
     private final ChecklistAnswerRepository answerRepository;
-    private final ActivityLogService activityLogService;
-    private final NotificationService notificationService;
-    private final ProjectMemberRepository projectMemberRepository;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     // 체크리스트 생성
     public Long createChecklist(ChecklistCreateRequest request, User user, String ip) {
@@ -95,31 +99,15 @@ public class ChecklistService {
             }
         }
 
-        // 로그 생성
-        activityLogService.createLog(
-                ActionType.CREATE,
-                TargetTable.CHECKLIST,
+        // 이벤트 발행
+        eventPublisher.publishEvent(new ChecklistCreatedEvent(
+                this,
                 checklist.getId(),
-                user.getId(),
-                step.getProject().getId(),
-                ip
-        );
-
-        // --- 알림 발송: 프로젝트 전체 멤버에게 ---
-        List<ProjectMember> members =
-                projectMemberRepository.findByProjectIdAndDeletedAtIsNull(step.getProject().getId());
-
-        for (ProjectMember pm : members) {
-            notificationService.send(
-                    pm.getUser(),
-                    NotificationType.CHECKLIST_CREATED,
-                    "새 체크리스트 생성",
-                    String.format("[%s] 체크리스트가 생성되었습니다.", checklist.getTitle()),
-                    step.getProject(),
-                    null,
-                    null
-            );
-        }
+                step.getProject(),
+                user,
+                ip,
+                checklist.getTitle()
+        ));
 
         return checklist.getId();
     }
@@ -193,15 +181,16 @@ public class ChecklistService {
             checklist.changeStep(newStep);
         }
 
-        // 로그 생성
-        activityLogService.createLog(
-                ActionType.UPDATE,
-                TargetTable.CHECKLIST,
+        Long projectId = checklist.getStep().getProject().getId();
+
+        // 이벤트 발행 - 로그
+        eventPublisher.publishEvent(new ChecklistUpdatedEvent(
+                this,
                 checklist.getId(),
-                user.getId(),
-                checklist.getStep().getProject().getId(),
+                projectId,
+                user,
                 ip
-        );
+        ));
 
         return checklist.getId();
     }
@@ -227,15 +216,14 @@ public class ChecklistService {
 
         checklistRepository.delete(checklist);
 
-        // 로그 생성
-        activityLogService.createLog(
-                ActionType.DELETE,
-                TargetTable.CHECKLIST,
+        // 이벤트 발행 - 로그
+        eventPublisher.publishEvent(new ChecklistDeletedEvent(
+                this,
                 checklistId,
-                user.getId(),
                 projectId,
+                user,
                 ip
-        );
+        ));
         return checklistId;
     }
 
@@ -297,39 +285,19 @@ public class ChecklistService {
 
                 answerRepository.save(newAnswer);
             }
-
-            // 로그 생성
-            activityLogService.createLog(
-                    ActionType.SUBMIT,
-                    TargetTable.CHECKLIST,
-                    checklist.getId(),
-                    user.getId(),
-                    checklist.getStep().getProject().getId(),
-                    ip
-            );
         }
 
         // 제출 완료 후 lock
         checklist.lockChecklist();
 
-        // 알림 발송: 프로젝트 전체 멤버에게 "체크리스트 제출됨"
-        List<ProjectMember> members =
-                projectMemberRepository.findByProjectIdAndDeletedAtIsNull(
-                        checklist.getStep().getProject().getId()
-                );
-
-        for (ProjectMember pm : members) {
-
-            notificationService.send(
-                    pm.getUser(),
-                    NotificationType.CHECKLIST_SUBMITTED,
-                    "체크리스트 제출",
-                    String.format("[%s] 체크리스트가 제출되었습니다.", checklist.getTitle()),
-                    checklist.getStep().getProject(),
-                    null,
-                    null
-            );
-        }
+        eventPublisher.publishEvent(new ChecklistSubmittedEvent(
+                this,
+                checklist.getId(),
+                checklist.getStep().getProject(),
+                user,
+                ip,
+                checklist.getTitle()
+        ));
 
         return checklist.getId();
     }

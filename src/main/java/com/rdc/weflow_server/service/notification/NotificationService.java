@@ -205,7 +205,8 @@ public class NotificationService {
      */
     private NotificationPriority determinePriority(NotificationType type) {
         return switch (type) {
-            case STEP_REQUEST, STEP_DECISION, MENTION -> NotificationPriority.IMPORTANT;
+            case STEP_REQUEST, STEP_DECISION, MENTION,
+                 PASSWORD_CHANGED, PASSWORD_RESET_BY_ADMIN -> NotificationPriority.IMPORTANT;
             default -> NotificationPriority.NORMAL;
         };
     }

@@ -483,20 +483,31 @@ public class StepRequestService {
     }
 
     private void validatePreviousStepApproved(Step step) {
-        if (step == null || step.getProject() == null || step.getOrderIndex() == null) {
+        if (step == null || step.getProject() == null) {
             throw new BusinessException(ErrorCode.INVALID_STEP_ORDER);
         }
 
-        Integer orderIndex = step.getOrderIndex();
-        if (orderIndex <= 1) {
-            return; // 첫 단계는 예외
+        // 전체 단계 목록을 phasePriority → orderIndex → id 기준으로 정렬
+        List<Step> orderedSteps = stepRepository.findByProject_IdAndDeletedAtIsNullOrderByOrderIndexAsc(
+                step.getProject().getId()
+        );
+
+        int index = -1;
+        for (int i = 0; i < orderedSteps.size(); i++) {
+            if (orderedSteps.get(i).getId().equals(step.getId())) {
+                index = i;
+                break;
+            }
         }
 
-        Step previousStep = stepRepository.findTopByProject_IdAndOrderIndexAndDeletedAtIsNullOrderByIdAsc(
-                        step.getProject().getId(),
-                        orderIndex - 1)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_STEP_ORDER));
+        if (index == -1) {
+            throw new BusinessException(ErrorCode.INVALID_STEP_ORDER);
+        }
+        if (index == 0) {
+            return; // 첫 단계는 이전 단계 없음
+        }
 
+        Step previousStep = orderedSteps.get(index - 1);
         if (previousStep.getStatus() != StepStatus.APPROVED) {
             throw new BusinessException(ErrorCode.PREVIOUS_STEP_NOT_APPROVED);
         }

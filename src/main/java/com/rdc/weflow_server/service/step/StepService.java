@@ -100,6 +100,9 @@ public class StepService {
         }
 
         ProjectPhase phase = request.getPhase() != null ? request.getPhase() : ProjectPhase.IN_PROGRESS;
+        if (Boolean.TRUE.equals(stepRepository.isPhaseCompleted(projectId, phase))) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "완료된 단계에는 스텝을 추가할 수 없습니다.");
+        }
         Integer orderIndex = resolveOrderIndex(projectId, phase, request.getOrderIndex());
         StepStatus status = StepStatus.PENDING;
 

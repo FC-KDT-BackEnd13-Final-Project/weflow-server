@@ -69,6 +69,18 @@ public interface StepRepository extends JpaRepository<Step, Long> {
 
     boolean existsByProject_IdAndPhaseAndOrderIndexAndDeletedAtIsNull(Long projectId, ProjectPhase phase, Integer orderIndex);
 
+    @Query("""
+            select case when count(s) > 0
+                        and sum(case when s.status = com.rdc.weflow_server.entity.step.StepStatus.APPROVED then 1 else 0 end) = count(s)
+                        then true else false end
+            from Step s
+            where s.project.id = :projectId
+              and s.phase = :phase
+              and s.deletedAt is null
+            """)
+    Boolean isPhaseCompleted(@org.springframework.data.repository.query.Param("projectId") Long projectId,
+                             @org.springframework.data.repository.query.Param("phase") ProjectPhase phase);
+
     Optional<Step> findByIdAndDeletedAtIsNull(Long id);
     @Query("""
             select s from Step s

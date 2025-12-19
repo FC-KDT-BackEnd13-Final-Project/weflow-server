@@ -21,6 +21,7 @@ public class PostUpdateRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class FileRequest {
+        private Long fileId;  // 기존 파일 ID (있으면 기존 파일 유지, 없으면 새 파일)
         private String fileName;
         private Long fileSize;
         private String filePath;
@@ -31,6 +32,7 @@ public class PostUpdateRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LinkRequest {
+        private Long linkId;  // 기존 링크 ID (있으면 기존 링크 유지, 없으면 새 링크)
         private String url;
     }
 

@@ -17,7 +17,6 @@ import com.rdc.weflow_server.repository.attachment.AttachmentRepository;
 import com.rdc.weflow_server.repository.comment.CommentRepository;
 import com.rdc.weflow_server.repository.post.PostAnswerRepository;
 import com.rdc.weflow_server.repository.post.PostQuestionRepository;
-import com.rdc.weflow_server.repository.post.PostQuestionOptionRepository;
 import com.rdc.weflow_server.repository.post.PostRepository;
 import com.rdc.weflow_server.repository.project.ProjectMemberRepository;
 import com.rdc.weflow_server.repository.step.StepRepository;
@@ -506,46 +505,74 @@ public class PostService {
             post.updateContent(request.getContent());
         }
 
-        // 기존 파일 삭제
+        // 파일 처리: fileId가 있으면 기존 파일 유지, 없으면 새 파일
         if (request.getFiles() != null) {
-            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
-                    Attachment.TargetType.POST,
-                    postId,
-                    Attachment.AttachmentType.FILE
-            );
+            // 요청에 포함된 파일 ID 목록
+            List<Long> requestedFileIds = request.getFiles().stream()
+                    .map(PostUpdateRequest.FileRequest::getFileId)
+                    .filter(id -> id != null)
+                    .toList();
 
-            // 새 파일 저장
+            // 기존 파일 중 요청에 없는 파일은 삭제
+            List<Attachment> existingFiles = attachmentRepository
+                    .findByTargetTypeAndTargetId(Attachment.TargetType.POST, postId).stream()
+                    .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.FILE)
+                    .toList();
+
+            for (Attachment existingFile : existingFiles) {
+                if (!requestedFileIds.contains(existingFile.getId())) {
+                    attachmentRepository.delete(existingFile);
+                }
+            }
+
+            // 새 파일 저장 (fileId가 null인 경우만)
             for (PostUpdateRequest.FileRequest fileReq : request.getFiles()) {
-                Attachment attachment = Attachment.builder()
-                        .targetType(Attachment.TargetType.POST)
-                        .targetId(postId)
-                        .attachmentType(Attachment.AttachmentType.FILE)
-                        .fileName(fileReq.getFileName())
-                        .fileSize(fileReq.getFileSize())
-                        .filePath(fileReq.getFilePath())
-                        .contentType(fileReq.getContentType())
-                        .build();
-                attachmentRepository.save(attachment);
+                if (fileReq.getFileId() == null) {
+                    Attachment attachment = Attachment.builder()
+                            .targetType(Attachment.TargetType.POST)
+                            .targetId(postId)
+                            .attachmentType(Attachment.AttachmentType.FILE)
+                            .fileName(fileReq.getFileName())
+                            .fileSize(fileReq.getFileSize())
+                            .filePath(fileReq.getFilePath())
+                            .contentType(fileReq.getContentType())
+                            .build();
+                    attachmentRepository.save(attachment);
+                }
             }
         }
 
-        // 기존 링크 삭제
+        // 링크 처리: linkId가 있으면 기존 링크 유지, 없으면 새 링크
         if (request.getLinks() != null) {
-            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
-                    Attachment.TargetType.POST,
-                    postId,
-                    Attachment.AttachmentType.LINK
-            );
+            // 요청에 포함된 링크 ID 목록
+            List<Long> requestedLinkIds = request.getLinks().stream()
+                    .map(PostUpdateRequest.LinkRequest::getLinkId)
+                    .filter(id -> id != null)
+                    .toList();
 
-            // 새 링크 저장
+            // 기존 링크 중 요청에 없는 링크는 삭제
+            List<Attachment> existingLinks = attachmentRepository
+                    .findByTargetTypeAndTargetId(Attachment.TargetType.POST, postId).stream()
+                    .filter(a -> a.getAttachmentType() == Attachment.AttachmentType.LINK)
+                    .toList();
+
+            for (Attachment existingLink : existingLinks) {
+                if (!requestedLinkIds.contains(existingLink.getId())) {
+                    attachmentRepository.delete(existingLink);
+                }
+            }
+
+            // 새 링크 저장 (linkId가 null인 경우만)
             for (PostUpdateRequest.LinkRequest linkReq : request.getLinks()) {
-                Attachment link = Attachment.builder()
-                        .targetType(Attachment.TargetType.POST)
-                        .targetId(postId)
-                        .attachmentType(Attachment.AttachmentType.LINK)
-                        .url(linkReq.getUrl())
-                        .build();
-                attachmentRepository.save(link);
+                if (linkReq.getLinkId() == null) {
+                    Attachment link = Attachment.builder()
+                            .targetType(Attachment.TargetType.POST)
+                            .targetId(postId)
+                            .attachmentType(Attachment.AttachmentType.LINK)
+                            .url(linkReq.getUrl())
+                            .build();
+                    attachmentRepository.save(link);
+                }
             }
         }
 

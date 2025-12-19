@@ -19,6 +19,7 @@ public class StepRequestSummaryResponse {
     private StepRequestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime decidedAt;
+    private LocalDateTime updatedAt;
     private Long projectId;
     private String projectName;
     private ProjectPhase phase;
@@ -35,6 +36,7 @@ public class StepRequestSummaryResponse {
                 .status(sr.getStatus())
                 .createdAt(sr.getCreatedAt())
                 .decidedAt(sr.getDecidedAt())
+                .updatedAt(sr.getUpdatedAt())
                 .projectId(sr.getStep().getProject().getId())
                 .projectName(sr.getStep().getProject().getName())
                 .phase(sr.getStep().getPhase())

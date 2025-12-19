@@ -458,6 +458,7 @@ public class StepRequestService {
                         .orElse(null))
                 .attachments(getAttachments(stepRequest))
                 .createdAt(stepRequest.getCreatedAt())
+                .updatedAt(stepRequest.getUpdatedAt())
                 .build();
     }
 

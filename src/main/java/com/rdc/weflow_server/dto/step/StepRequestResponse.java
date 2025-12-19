@@ -28,4 +28,5 @@ public class StepRequestResponse {
     private String decisionReason;
     private List<AttachmentSimpleResponse> attachments;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

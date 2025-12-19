@@ -143,14 +143,12 @@ public class StepRequestService {
             stepRequest.updateDescription(request.getDescription());
         }
 
-        // 파일 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
-        if (request.getFiles() != null) {
-            syncRequestFiles(stepRequest, toFilePayloads(request.getFiles()), ctx);
+        // 파일/링크 첨부 동기화
+        if (request.getFiles() != null || request.getKeepFileIds() != null) {
+            syncRequestFiles(stepRequest, request, ctx);
         }
-
-        // 링크 첨부 동기화 (null이면 유지, 빈 리스트면 모두 제거)
-        if (request.getLinks() != null) {
-            syncRequestLinks(stepRequest, toLinkPayloads(request.getLinks()), ctx);
+        if (request.getLinks() != null || request.getKeepLinkIds() != null) {
+            syncRequestLinks(stepRequest, request, ctx);
         }
 
         // CHANGE_REQUESTED -> REQUESTED 재요청 전이
@@ -265,6 +263,58 @@ public class StepRequestService {
         notifyClients(stepRequest, NotificationType.STEP_REQUEST, step.getTitle(), "승인 요청이 취소되었습니다.");
     }
 
+    private void syncRequestFiles(StepRequest stepRequest, StepRequestUpdateRequest request, AuditContext ctx) {
+        List<Long> keepFileIds = request.getKeepFileIds();
+        List<SimpleFilePayload> files = toFilePayloads(request.getFiles());
+
+        if (keepFileIds == null) { // 하위호환: 전체 교체
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.FILE
+            );
+        } else if (keepFileIds.isEmpty()) {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.FILE
+            );
+        } else {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentTypeAndIdNotIn(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.FILE,
+                    keepFileIds
+            );
+        }
+
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+
+        for (SimpleFilePayload file : files) {
+            validateFilePayload(file);
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST)
+                    .targetId(stepRequest.getId())
+                    .attachmentType(Attachment.AttachmentType.FILE)
+                    .fileName(file.fileName())
+                    .fileSize(file.fileSize())
+                    .filePath(file.filePath())
+                    .contentType(file.contentType())
+                    .build();
+            attachmentRepository.save(attachment);
+            activityLogService.createLog(
+                    ActionType.UPLOAD,
+                    TargetTable.ATTACHMENT,
+                    attachment.getId(),
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
+            );
+        }
+    }
+
     private void syncRequestFiles(StepRequest stepRequest, List<SimpleFilePayload> files, AuditContext ctx) {
         if (files == null) {
             return;
@@ -290,6 +340,55 @@ public class StepRequestService {
                     .fileSize(file.fileSize())
                     .filePath(file.filePath())
                     .contentType(file.contentType())
+                    .build();
+            attachmentRepository.save(attachment);
+            activityLogService.createLog(
+                    ActionType.UPLOAD,
+                    TargetTable.ATTACHMENT,
+                    attachment.getId(),
+                    ctx.userId(),
+                    stepRequest.getStep().getProject().getId(),
+                    ctx.ipAddress()
+            );
+        }
+    }
+
+    private void syncRequestLinks(StepRequest stepRequest, StepRequestUpdateRequest request, AuditContext ctx) {
+        List<Long> keepLinkIds = request.getKeepLinkIds();
+        List<SimpleLinkPayload> links = toLinkPayloads(request.getLinks());
+
+        if (keepLinkIds == null) { // 하위호환: 전체 교체
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.LINK
+            );
+        } else if (keepLinkIds.isEmpty()) {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentType(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.LINK
+            );
+        } else {
+            attachmentRepository.deleteByTargetTypeAndTargetIdAndAttachmentTypeAndIdNotIn(
+                    Attachment.TargetType.STEP_REQUEST,
+                    stepRequest.getId(),
+                    Attachment.AttachmentType.LINK,
+                    keepLinkIds
+            );
+        }
+
+        if (links == null || links.isEmpty()) {
+            return;
+        }
+
+        for (SimpleLinkPayload link : links) {
+            validateLinkPayload(link);
+            Attachment attachment = Attachment.builder()
+                    .targetType(Attachment.TargetType.STEP_REQUEST)
+                    .targetId(stepRequest.getId())
+                    .attachmentType(Attachment.AttachmentType.LINK)
+                    .url(link.url())
                     .build();
             attachmentRepository.save(attachment);
             activityLogService.createLog(

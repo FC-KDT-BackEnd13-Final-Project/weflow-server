@@ -27,6 +27,13 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
             Attachment.AttachmentType attachmentType
     );
 
+    void deleteByTargetTypeAndTargetIdAndAttachmentTypeAndIdNotIn(
+            Attachment.TargetType targetType,
+            Long targetId,
+            Attachment.AttachmentType attachmentType,
+            List<Long> keepIds
+    );
+
     @org.springframework.data.jpa.repository.Query("""
             select distinct a.targetId
             from Attachment a

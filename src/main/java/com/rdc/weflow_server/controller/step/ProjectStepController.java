@@ -21,13 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Validated
-@RequestMapping("/api")
+@RequestMapping("/api/projects")
 public class ProjectStepController {
 
     private final StepService stepService;
 
     /** 단계 생성 */
-    @PostMapping("/projects/{projectId}/steps")
+    @PostMapping("/{projectId}/steps")
     public ApiResponse<StepResponse> createStep(@PathVariable Long projectId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
                                                 @RequestBody @Valid StepCreateRequest request,
@@ -38,7 +38,7 @@ public class ProjectStepController {
     }
 
     /** 단계 수정 */
-    @PatchMapping("/projects/steps/{stepId}")
+    @PatchMapping("/steps/{stepId}")
     public ApiResponse<StepResponse> updateStep(@PathVariable Long stepId,
                                                 @AuthenticationPrincipal CustomUserDetails user,
                                                 @RequestBody @Valid StepUpdateRequest request,
@@ -49,7 +49,7 @@ public class ProjectStepController {
     }
 
     /** 단계 삭제 */
-    @DeleteMapping("/projects/steps/{stepId}")
+    @DeleteMapping("/steps/{stepId}")
     public ApiResponse<Void> deleteStep(@PathVariable Long stepId,
                                         @AuthenticationPrincipal CustomUserDetails user,
                                         HttpServletRequest httpRequest) {
@@ -59,7 +59,7 @@ public class ProjectStepController {
     }
 
     /** 단계 순서 재배치 */
-    @PatchMapping("/projects/{projectId}/steps/reorder")
+    @PatchMapping("/{projectId}/steps/reorder")
     public ApiResponse<StepListResponse> reorderSteps(@AuthenticationPrincipal CustomUserDetails user,
                                                       @PathVariable Long projectId,
                                                       @RequestBody @Valid StepPhaseReorderRequest request,
